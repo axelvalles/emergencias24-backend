@@ -1,0 +1,11 @@
+export default () => ({
+  TWILIO_ACCOUNT_SID: String(process.env.TWILIO_ACCOUNT_SID),
+  TWILIO_AUTH_TOKEN: String(process.env.TWILIO_AUTH_TOKEN),
+  TWILIO_PHONE_NUMBER: String(process.env.TWILIO_PHONE_NUMBER),
+  DB_HOST: String(process.env.DB_HOST),
+  DB_PORT: Number(process.env.DB_PORT),
+  DB_USERNAME: String(process.env.DB_USERNAME),
+  DB_PASSWORD: String(process.env.DB_PASSWORD),
+  DB_NAME: String(process.env.DB_NAME),
+  REDIS_URL: String(process.env.REDIS_URL),
+});
