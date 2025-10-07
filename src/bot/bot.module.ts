@@ -2,18 +2,12 @@ import { Module } from '@nestjs/common';
 import { BotController } from './bot.controller';
 import { BotService } from './bot.service';
 import { SessionStoreService } from './session-store.service';
-import { TwilioService } from 'src/shared/twilio.service';
-import { commandProviders } from './commands/command-providers';
-import { ClientsModule } from 'src/clients/clients.module';
+import { PatientsModule } from 'src/patients/patients.module';
+import { MessagingModule } from 'src/shared/messaging/messaging.module';
 
 @Module({
-  imports: [ClientsModule],
+  imports: [PatientsModule, MessagingModule],
   controllers: [BotController],
-  providers: [
-    BotService,
-    SessionStoreService,
-    TwilioService,
-    ...commandProviders,
-  ],
+  providers: [BotService, SessionStoreService],
 })
 export class BotModule {}

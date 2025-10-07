@@ -1,10 +1,10 @@
-import { Client } from 'src/clients/entities/client.entity';
-import { FlowState } from './flows.enum';
+import { Patient } from 'src/patients/entities/patient.entity';
+import { BotStates } from '../flow/state-machine.config';
 
 export interface BotSession {
-  userId: string;
-  state: FlowState;
+  from: string;
   lastInteraction: Date;
-  clientData?: Client;
-  nextState?: FlowState;
+  previousState: BotStates;
+  currentState: BotStates;
+  patient: Patient | null;
 }

@@ -2,40 +2,44 @@ import { InjectRedis } from '@nestjs-modules/ioredis';
 import { Injectable } from '@nestjs/common';
 import Redis from 'ioredis';
 import { BotSession } from './interfaces/bot-session.interface';
-import { FlowState } from './interfaces/flows.enum';
+import { Patient } from 'src/patients/entities/patient.entity';
 
 @Injectable()
 export class SessionStoreService {
   constructor(@InjectRedis() private readonly redis: Redis) {}
 
-  async getSession(userId: string): Promise<BotSession> {
-    const data = await this.redis.get(`session:${userId}`);
+  async getSession(from: string): Promise<BotSession> {
+    const data = await this.redis.get(`session:${from}`);
 
     if (!data) {
-      const session = {
-        userId,
-        state: FlowState.WELCOME,
+      return {
+        currentState: 'SEND_MAIN_MENU',
+        from: from,
         lastInteraction: new Date(),
+        previousState: 'SEND_MAIN_MENU',
+        patient: null,
       };
-
-      await this.setSession(userId, session);
-
-      return session;
     }
 
     return JSON.parse(data) as BotSession;
   }
 
-  async setSession(userId: string, session: BotSession) {
+  async setSession(from: string, session: BotSession): Promise<void> {
     await this.redis.set(
-      `session:${userId}`,
+      `session:${from}`,
       JSON.stringify(session),
       'EX',
       60 * 30,
-    ); // 30 min
+    );
   }
 
-  async clearSession(userId: string) {
-    await this.redis.del(`session:${userId}`);
+  async setPatient(from: string, patient: Patient | null): Promise<void> {
+    const session = await this.getSession(from);
+    session.patient = patient;
+    await this.setSession(from, session);
+  }
+
+  async clearSession(from: string): Promise<void> {
+    await this.redis.del(`session:${from}`);
   }
 }
