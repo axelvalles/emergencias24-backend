@@ -15,7 +15,7 @@ const messagingProviderFactory = {
         return new TwilioMessagingProvider(configService);
       default:
         // throw new Error('Proveedor de mensajería no especificado o inválido');
-        return new MetaMessagingProvider(configService);
+        return new TwilioMessagingProvider(configService);
     }
   },
   inject: [ConfigService],

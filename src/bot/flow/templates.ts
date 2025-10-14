@@ -1,0 +1,3 @@
+export const TWILIO_TEMPLATES = {
+  MAIN_MENU: 'HX2de46b65795ad8eecd01b67d7491a248',
+};

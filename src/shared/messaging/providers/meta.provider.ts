@@ -76,10 +76,7 @@ export class MetaMessagingProvider implements IMessagingProvider {
 
       return response.data;
     } catch (error) {
-      this.logger.error(
-        `❌ Error enviando mensaje con Meta al destinatario: ${payload.to}`,
-        error.response?.data || error.message,
-      );
+      this.logger.error(`❌ Error enviando mensaje con Meta al destinatario`);
       throw error;
     }
   }

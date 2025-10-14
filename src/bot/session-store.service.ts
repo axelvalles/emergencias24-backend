@@ -15,7 +15,7 @@ export class SessionStoreService {
       return {
         currentState: 'SEND_MAIN_MENU',
         from: from,
-        lastInteraction: new Date(),
+        lastInteraction: new Date().toISOString(),
         previousState: 'SEND_MAIN_MENU',
         patient: null,
       };

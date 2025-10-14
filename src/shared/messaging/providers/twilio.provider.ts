@@ -1,7 +1,8 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { ConfigService, ConfigType } from '@nestjs/config';
 import * as twilio from 'twilio';
 import { IMessagingProvider } from '../interfaces/messaging.interface';
+import twilioConfig from 'src/config/twilio.config';
 
 @Injectable()
 export class TwilioMessagingProvider implements IMessagingProvider {
@@ -9,9 +10,12 @@ export class TwilioMessagingProvider implements IMessagingProvider {
   private phoneNumber: string;
 
   constructor(private configService: ConfigService) {
-    const accountSid = this.configService.get<string>('TWILIO_ACCOUNT_SID');
-    const authToken = this.configService.get<string>('TWILIO_AUTH_TOKEN');
-    const phoneNumber = this.configService.get<string>('TWILIO_PHONE_NUMBER');
+    const twilioCfg =
+      configService.get<ConfigType<typeof twilioConfig>>('twilio');
+
+    const accountSid = twilioCfg!.accountSid;
+    const authToken = twilioCfg!.authToken;
+    const phoneNumber = twilioCfg!.phoneNumber;
 
     if (!phoneNumber) {
       throw new InternalServerErrorException(

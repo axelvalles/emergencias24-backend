@@ -2,6 +2,7 @@ import { MessagingService } from 'src/shared/messaging/messaging.service';
 import { SessionStoreService } from '../session-store.service';
 import { PatientsService } from 'src/patients/patients.service';
 import { Patient } from 'src/patients/entities/patient.entity';
+import { TWILIO_TEMPLATES } from './templates';
 
 export type BotStates =
   | 'SEND_MAIN_MENU'
@@ -15,7 +16,7 @@ type Context = {
 
 type Response = {
   nextState: BotStates;
-  lastInteraction: Date;
+  lastInteraction: string;
   currentState: BotStates;
 };
 
@@ -41,12 +42,12 @@ export const stateMachineConfig: StateMachine = {
     async handle(_messagingResponse, context, serivices) {
       await serivices.messaging.sendTemplate(
         context.from,
-        'HX37b03e9cb14f8bc377a12be39dcfb3b2',
+        TWILIO_TEMPLATES.MAIN_MENU,
       );
 
       return {
         nextState: 'WAITING_MAIN_MENU_RESPONSE',
-        lastInteraction: new Date(),
+        lastInteraction: new Date().toISOString(),
         currentState: 'SEND_MAIN_MENU',
       };
     },
@@ -62,7 +63,7 @@ export const stateMachineConfig: StateMachine = {
 
           return {
             nextState: 'IMMEDIATE_ATTENTION_ASK_LOCATION',
-            lastInteraction: new Date(),
+            lastInteraction: new Date().toISOString(),
             currentState: 'WAITING_MAIN_MENU_RESPONSE',
           };
         // case 'telemedicina':
@@ -90,7 +91,7 @@ export const stateMachineConfig: StateMachine = {
 
           return {
             nextState: 'WAITING_MAIN_MENU_RESPONSE', // Se queda en el mismo estado
-            lastInteraction: new Date(),
+            lastInteraction: new Date().toISOString(),
             currentState: 'WAITING_MAIN_MENU_RESPONSE',
           };
       }
@@ -109,7 +110,7 @@ export const stateMachineConfig: StateMachine = {
 
       return {
         nextState: 'SEND_MAIN_MENU',
-        lastInteraction: new Date(),
+        lastInteraction: new Date().toISOString(),
         currentState: 'IMMEDIATE_ATTENTION_ASK_LOCATION',
       };
     },

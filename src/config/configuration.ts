@@ -1,15 +1,32 @@
-export default () => ({
-  TWILIO_ACCOUNT_SID: String(process.env.TWILIO_ACCOUNT_SID),
-  TWILIO_AUTH_TOKEN: String(process.env.TWILIO_AUTH_TOKEN),
-  TWILIO_PHONE_NUMBER: String(process.env.TWILIO_PHONE_NUMBER),
-  WHATSAPP_VERIFY_TOKEN: String(process.env.WHATSAPP_VERIFY_TOKEN),
-  WHATSAPP_IDENTIFIER: String(process.env.WHATSAPP_IDENTIFIER),
-  META_ACCESS_TOKEN: String(process.env.META_ACCESS_TOKEN),
-  META_PHONE_NUMBER_ID: String(process.env.META_PHONE_NUMBER_ID),
-  DB_HOST: String(process.env.DB_HOST),
-  DB_PORT: Number(process.env.DB_PORT),
-  DB_USERNAME: String(process.env.DB_USERNAME),
-  DB_PASSWORD: String(process.env.DB_PASSWORD),
-  DB_NAME: String(process.env.DB_NAME),
-  REDIS_URL: String(process.env.REDIS_URL),
+import { z } from 'zod';
+
+export const envSchema = z.object({
+  NODE_ENV: z
+    .enum(['development', 'production', 'test'])
+    .default('development'),
+
+  // Twilio
+  TWILIO_ACCOUNT_SID: z.string().min(1),
+  TWILIO_AUTH_TOKEN: z.string().min(1),
+  TWILIO_PHONE_NUMBER: z.string().regex(/^whatsapp:\+\d+$/, 'Formato inválido'),
+
+  // Meta
+  META_ACCESS_TOKEN: z.string().min(1),
+  META_PHONE_NUMBER_ID: z.string().min(1),
+  WHATSAPP_VERIFY_TOKEN: z.string().min(1),
+
+  // DB
+  DB_HOST: z.string(),
+  DB_PORT: z.coerce.number().default(5432),
+  DB_USERNAME: z.string(),
+  DB_PASSWORD: z.string(),
+  DB_NAME: z.string(),
+
+  // Redis
+  REDIS_URL: z.url(),
+
+  // Otros
+  PORT: z.coerce.number().default(3000),
 });
+
+export type EnvVars = z.infer<typeof envSchema>;

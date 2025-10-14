@@ -3,7 +3,7 @@ import { BotStates } from '../flow/state-machine.config';
 
 export interface BotSession {
   from: string;
-  lastInteraction: Date;
+  lastInteraction: string;
   previousState: BotStates;
   currentState: BotStates;
   patient: Patient | null;
