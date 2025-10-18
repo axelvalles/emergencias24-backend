@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreatePatientDto } from './dto/create-patient.dto';
 import { UpdatePatientDto } from './dto/update-patient.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -12,27 +12,145 @@ export class PatientsService {
     private readonly patientRepository: Repository<Patient>,
   ) {}
 
-  findByPhone(phone: string) {
-    return this.patientRepository.findOneBy({ phone });
+  async create(createPatientDto: CreatePatientDto): Promise<Patient> {
+    const patient = this.patientRepository.create(createPatientDto);
+    return this.patientRepository.save(patient);
   }
 
-  create(createPatientDto: CreatePatientDto) {
-    return 'This action adds a new patient';
+  async findAll(): Promise<Patient[]> {
+    return this.patientRepository.find({
+      relations: ['user', 'subscriptions', 'clinical_records'],
+      select: {
+        id: true,
+        first_name: true,
+        last_name: true,
+        birth_date: true,
+        gender: true,
+        document_type: true,
+        document_number: true,
+        phone: true,
+        patient_status: true,
+        created_at: true,
+        updated_at: true,
+        user: {
+          id: true,
+          email: true,
+          is_active: true,
+        },
+      },
+    });
   }
 
-  findAll() {
-    return `This action returns all patients`;
+  async findOne(id: number): Promise<Patient> {
+    const patient = await this.patientRepository.findOne({
+      where: { id },
+      relations: ['user', 'subscriptions', 'clinical_records'],
+      select: {
+        id: true,
+        first_name: true,
+        last_name: true,
+        birth_date: true,
+        gender: true,
+        document_type: true,
+        document_number: true,
+        address: true,
+        city: true,
+        state: true,
+        zip_code: true,
+        phone: true,
+        secondary_phone: true,
+        emergency_contact_name: true,
+        emergency_contact_phone: true,
+        blood_type: true,
+        allergies: true,
+        medical_conditions: true,
+        patient_status: true,
+        medical_record_number: true,
+        created_at: true,
+        updated_at: true,
+        user: {
+          id: true,
+          email: true,
+          is_active: true,
+        },
+      },
+    });
+
+    if (!patient) {
+      throw new NotFoundException(`Patient with ID ${id} not found`);
+    }
+
+    return patient;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} patient`;
+  async findByPhone(phone: string): Promise<Patient | null> {
+    return this.patientRepository.findOne({
+      where: { phone },
+      relations: ['user'],
+    });
   }
 
-  update(id: number, updatePatientDto: UpdatePatientDto) {
-    return `This action updates a #${id} patient`;
+  async findByDocument(documentNumber: string): Promise<Patient | null> {
+    return this.patientRepository.findOne({
+      where: { document_number: documentNumber },
+      relations: ['user'],
+    });
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} patient`;
+  async findByUserId(userId: number): Promise<Patient | null> {
+    return this.patientRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['user', 'subscriptions', 'clinical_records'],
+    });
+  }
+
+  async update(
+    id: number,
+    updatePatientDto: UpdatePatientDto,
+  ): Promise<Patient> {
+    const patient = await this.findOne(id);
+
+    // Update the patient with the new data
+    Object.assign(patient, updatePatientDto);
+    patient.updated_at = new Date();
+
+    return this.patientRepository.save(patient);
+  }
+
+  async remove(id: number): Promise<void> {
+    const patient = await this.findOne(id);
+    await this.patientRepository.remove(patient);
+  }
+
+  async activatePatient(id: number): Promise<Patient> {
+    const patient = await this.findOne(id);
+    patient.patient_status = 'Active';
+    patient.updated_at = new Date();
+    return this.patientRepository.save(patient);
+  }
+
+  async deactivatePatient(id: number): Promise<Patient> {
+    const patient = await this.findOne(id);
+    patient.patient_status = 'Inactive';
+    patient.updated_at = new Date();
+    return this.patientRepository.save(patient);
+  }
+
+  async findActivePatients(): Promise<Patient[]> {
+    return this.patientRepository.find({
+      where: { patient_status: 'Active' },
+      relations: ['user'],
+      select: {
+        id: true,
+        first_name: true,
+        last_name: true,
+        phone: true,
+        patient_status: true,
+        user: {
+          id: true,
+          email: true,
+        },
+      },
+    });
   }
 }

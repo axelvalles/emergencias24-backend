@@ -1,16 +1,27 @@
+import { Patient } from 'src/patients/entities/patient.entity';
+import { TWILIO_TEMPLATES } from './templates';
 import { MessagingService } from 'src/shared/messaging/messaging.service';
 import { SessionStoreService } from '../session-store.service';
 import { PatientsService } from 'src/patients/patients.service';
-import { Patient } from 'src/patients/entities/patient.entity';
-import { TWILIO_TEMPLATES } from './templates';
+
+// const OPERATOR_NUMBER = 'whatsapp:+584227426301';
 
 export type BotStates =
-  | 'SEND_MAIN_MENU'
-  | 'WAITING_MAIN_MENU_RESPONSE'
-  | 'IMMEDIATE_ATTENTION_ASK_LOCATION';
+  | 'START'
+  | 'WAITING_MENU_OPTION'
+  | 'WAITING_LOCATION'
+  | 'WAITING_CI'
+  | 'WAITING_MUNICIPIO'
+  | 'WAITING_DOMICILE_CONFIRMATION'
+  | 'WAITING_LOCATION_DOMICILE'
+  | 'WAITING_SPECIALTY'
+  | 'WAITING_LAB_TEST'
+  | 'WAITING_MUNICIPIO_TRANSFER'
+  | 'WAITING_CONFIRMATION_TRANSFER'
+  | 'WAITING_LOCATION_TRANSFER'
+  | 'WAITING_APPOINTMENT_CONFIRMATION';
 
 type Context = {
-  from: string;
   patient: Patient | null;
 };
 
@@ -30,7 +41,7 @@ type StateMachine = Record<
   BotStates,
   {
     handle(
-      messagingResponse: { from: string; body: string },
+      messagingResponse: { from: string; body: string; profileName: string },
       context: Context,
       serivices: Services,
     ): Promise<Response>;
@@ -38,80 +49,472 @@ type StateMachine = Record<
 >;
 
 export const stateMachineConfig: StateMachine = {
-  SEND_MAIN_MENU: {
-    async handle(_messagingResponse, context, serivices) {
-      await serivices.messaging.sendTemplate(
-        context.from,
+  START: {
+    async handle(messagingResponse, _context, services) {
+      console.log(messagingResponse);
+
+      await services.messaging.sendTemplate(
+        messagingResponse.from,
         TWILIO_TEMPLATES.MAIN_MENU,
+        { name: messagingResponse.profileName || '' },
       );
 
       return {
-        nextState: 'WAITING_MAIN_MENU_RESPONSE',
+        nextState: 'WAITING_MENU_OPTION',
         lastInteraction: new Date().toISOString(),
-        currentState: 'SEND_MAIN_MENU',
+        currentState: 'START',
       };
     },
   },
-  WAITING_MAIN_MENU_RESPONSE: {
-    async handle(messagingResponse, context, serivices) {
+  WAITING_MENU_OPTION: {
+    async handle(messagingResponse, context, services) {
       switch (messagingResponse.body) {
         case 'atencion-inmediata':
-          await serivices.messaging.sendMessage(
-            context.from,
-            '🚑 ¿Podrías compartir tu ubicación?',
+          await services.messaging.sendMessage(
+            messagingResponse.from,
+            'Para coordinar la ayuda de inmediato, por favor, envíame tu ubicación actual.',
           );
 
           return {
-            nextState: 'IMMEDIATE_ATTENTION_ASK_LOCATION',
+            nextState: 'WAITING_LOCATION',
             lastInteraction: new Date().toISOString(),
-            currentState: 'WAITING_MAIN_MENU_RESPONSE',
+            currentState: 'WAITING_MENU_OPTION',
           };
-        // case 'telemedicina':
-        //   return {};
-        // case 'atencion-domiciliaria':
-        //   return {};
-        // case 'consultas-medicas':
-        //   return {};
-        // case 'laboratorio':
-        //   return {};
-        // case 'ambulancia':
-        //   return {};
-        // case 'farmacia':
-        //   return {};
-        // case 'alquiler-de-equipos':
-        //   return {};
-        // case 'planes':
-        //   return {};
+        case 'telemedicina':
+          await services.messaging.sendMessage(
+            messagingResponse.from,
+            'Para continuar con la telemedicina, por favor, indícame tu número de Cédula de Identidad.',
+          );
 
+          return {
+            nextState: 'WAITING_CI',
+            lastInteraction: new Date().toISOString(),
+            currentState: 'WAITING_MENU_OPTION',
+          };
+        case 'atencion-domiciliaria':
+          await services.messaging.sendMessage(
+            messagingResponse.from,
+            '¿En qué municipio necesitas la atención domiciliaria?',
+          );
+
+          return {
+            nextState: 'WAITING_MUNICIPIO',
+            lastInteraction: new Date().toISOString(),
+            currentState: 'WAITING_MENU_OPTION',
+          };
+        case 'consultas-medicas':
+          await services.messaging.sendMessage(
+            messagingResponse.from,
+            '¿Para qué especialidad médica necesitas una consulta?',
+          );
+
+          return {
+            nextState: 'WAITING_SPECIALTY',
+            lastInteraction: new Date().toISOString(),
+            currentState: 'WAITING_MENU_OPTION',
+          };
+        case 'laboratorio': {
+          await services.messaging.sendMessage(
+            messagingResponse.from,
+            '¿Que pruebas desea realizar?',
+          );
+
+          return {
+            nextState: 'WAITING_LAB_TEST',
+            lastInteraction: new Date().toISOString(),
+            currentState: 'WAITING_MENU_OPTION',
+          };
+        }
+        case 'ambulancia': {
+          await services.messaging.sendMessage(
+            messagingResponse.from,
+            '¿En qué municipio necesitas el traslado?',
+          );
+
+          return {
+            nextState: 'WAITING_MUNICIPIO_TRANSFER',
+            lastInteraction: new Date().toISOString(),
+            currentState: 'WAITING_MENU_OPTION',
+          };
+        }
+        case 'farmacia':
+          await services.messaging.sendMessage(
+            messagingResponse.from,
+            'Para contactar a nuestra farmacia, por favor comunícate a través de este enlace: [Enlace a WhatsApp del 04227426303]',
+          );
+
+          return {
+            nextState: 'START',
+            lastInteraction: new Date().toISOString(),
+            currentState: 'WAITING_MENU_OPTION',
+          };
         default:
-          await serivices.messaging.sendMessage(
-            context.from,
+          await services.messaging.sendMessage(
+            messagingResponse.from,
             'Opción no válida. Por favor, elige una opción del menú.',
           );
 
           return {
-            nextState: 'WAITING_MAIN_MENU_RESPONSE', // Se queda en el mismo estado
+            nextState: 'WAITING_MENU_OPTION',
             lastInteraction: new Date().toISOString(),
-            currentState: 'WAITING_MAIN_MENU_RESPONSE',
+            currentState: 'WAITING_MENU_OPTION',
           };
       }
     },
   },
-  IMMEDIATE_ATTENTION_ASK_LOCATION: {
-    async handle(messagingResponse, context, serivices) {
-      console.log(
-        `El paciente ${context.from} requiere atención inmediata, esta es la direccion ${messagingResponse.body}`,
-      );
+  WAITING_LOCATION: {
+    async handle(messagingResponse, _context, services) {
+      const isValidLocation = messagingResponse.body.trim() !== '';
 
-      await serivices.messaging.sendMessage(
-        context.from,
-        `Un operador se pondra en contacto contigo pronto.`,
+      // TODO: Debe permitir enviar una ubicacion
+      if (!isValidLocation) {
+        await services.messaging.sendMessage(
+          messagingResponse.from,
+          'Por favor, escribe una ubicación para poder continuar.',
+        );
+
+        return {
+          nextState: 'WAITING_LOCATION',
+          lastInteraction: new Date().toISOString(),
+          currentState: 'WAITING_LOCATION',
+        };
+      }
+
+      // TODO: Generar alerta a operador en despacho
+
+      await services.messaging.sendMessage(
+        messagingResponse.from,
+        '¡Ubicación recibida! Hemos generado un ticket de servicio y un operador le contectara de inmediato.',
       );
 
       return {
-        nextState: 'SEND_MAIN_MENU',
+        nextState: 'START',
         lastInteraction: new Date().toISOString(),
-        currentState: 'IMMEDIATE_ATTENTION_ASK_LOCATION',
+        currentState: 'WAITING_LOCATION',
+      };
+    },
+  },
+  WAITING_CI: {
+    async handle(messagingResponse, _context, services) {
+      const ciRegex = /^\d{7,8}$/;
+      const isValidCI = ciRegex.test(messagingResponse.body.trim());
+
+      if (!isValidCI) {
+        await services.messaging.sendMessage(
+          messagingResponse.from,
+          'El número ingresado no parece ser válido. Por favor, ingrésalo nuevamente.',
+        );
+
+        return {
+          nextState: 'WAITING_CI',
+          lastInteraction: new Date().toISOString(),
+          currentState: 'WAITING_CI',
+        };
+      }
+
+      const patient = await services.patientsService.findByDocument(
+        messagingResponse.body.trim(),
+      );
+
+      if (!patient) {
+        await services.messaging.sendMessage(
+          messagingResponse.from,
+          'Parece que no estas registrado. Si quieres afiliarte puedes enviar un correo a analista@emergencias24ve.com',
+        );
+
+        return {
+          nextState: 'START',
+          lastInteraction: new Date().toISOString(),
+          currentState: 'WAITING_CI',
+        };
+      }
+
+      // TODO: Generar alerta a operador en despacho
+
+      await services.messaging.sendMessage(
+        messagingResponse.from,
+        `Gracias ${patient.fullName}. Hemos enviado tu solicitud. Un médico de guardia te contactará en breve.`,
+      );
+
+      return {
+        nextState: 'START',
+        lastInteraction: new Date().toISOString(),
+        currentState: 'WAITING_CI',
+      };
+    },
+  },
+  WAITING_MUNICIPIO: {
+    async handle(messagingResponse, context, services) {
+      const municipio = messagingResponse.body.trim();
+
+      // TODO: convertir esto en lista
+      if (!municipio) {
+        await services.messaging.sendMessage(
+          messagingResponse.from,
+          'Por favor, indica un municipio para continuar.',
+        );
+
+        return {
+          nextState: 'WAITING_MUNICIPIO',
+          lastInteraction: new Date().toISOString(),
+          currentState: 'WAITING_MUNICIPIO',
+        };
+      }
+
+      // TODO: Buscar los costos por base de dato
+      await services.messaging.sendMessage(
+        messagingResponse.from,
+        `Para el municipio ${municipio}, el costo es de x. ¿Deseas solicitar el servicio? (Sí/No)`,
+      );
+
+      return {
+        nextState: 'WAITING_DOMICILE_CONFIRMATION',
+        lastInteraction: new Date().toISOString(),
+        currentState: 'WAITING_MUNICIPIO',
+      };
+    },
+  },
+  WAITING_DOMICILE_CONFIRMATION: {
+    async handle(messagingResponse, context, services) {
+      const response = messagingResponse.body.toLowerCase().trim();
+
+      if (response === 'no') {
+        await services.messaging.sendMessage(
+          messagingResponse.from,
+          'Entendido. ¿Hay algo más en lo que pueda ayudarte?',
+        );
+
+        return {
+          nextState: 'START',
+          lastInteraction: new Date().toISOString(),
+          currentState: 'WAITING_DOMICILE_CONFIRMATION',
+        };
+      }
+
+      if (response === 'sí' || response === 'si') {
+        // TODO debe permitir location en mapa
+        await services.messaging.sendMessage(
+          messagingResponse.from,
+          'Por favor, envíame tu ubicación exacta, para que nuestro equipo llegue de manera inmediata.',
+        );
+
+        return {
+          nextState: 'WAITING_LOCATION_DOMICILE',
+          lastInteraction: new Date().toISOString(),
+          currentState: 'WAITING_DOMICILE_CONFIRMATION',
+        };
+      }
+
+      await services.messaging.sendMessage(
+        messagingResponse.from,
+        'Por favor, responde con "Sí" o "No".',
+      );
+
+      return {
+        nextState: 'WAITING_DOMICILE_CONFIRMATION',
+        lastInteraction: new Date().toISOString(),
+        currentState: 'WAITING_DOMICILE_CONFIRMATION',
+      };
+    },
+  },
+  WAITING_LOCATION_DOMICILE: {
+    async handle(messagingResponse, context, services) {
+      // TODO: Generar alerta a operador en despacho
+
+      await services.messaging.sendMessage(
+        messagingResponse.from,
+        'Perfecto. Un operador se comunicará contigo para confirmar los detalles.',
+      );
+
+      return {
+        nextState: 'START',
+        lastInteraction: new Date().toISOString(),
+        currentState: 'WAITING_DOMICILE_CONFIRMATION',
+      };
+    },
+  },
+  WAITING_SPECIALTY: {
+    async handle(messagingResponse, context, services) {
+      const specialty = messagingResponse.body.trim();
+
+      // TODO: convertir en lista
+      if (!specialty) {
+        await services.messaging.sendMessage(
+          messagingResponse.from,
+          'Por favor, indica una especialidad para continuar.',
+        );
+
+        return {
+          nextState: 'WAITING_SPECIALTY',
+          lastInteraction: new Date().toISOString(),
+          currentState: 'WAITING_SPECIALTY',
+        };
+      }
+
+      // TODO: Traer precios de base de datos
+      await services.messaging.sendMessage(
+        messagingResponse.from,
+        `Las consultas de ${specialty} tienen un costo de X. ¿Deseas agendar una cita? (Sí/No)`,
+      );
+
+      return {
+        nextState: 'WAITING_APPOINTMENT_CONFIRMATION',
+        lastInteraction: new Date().toISOString(),
+        currentState: 'WAITING_SPECIALTY',
+      };
+    },
+  },
+  WAITING_LAB_TEST: {
+    async handle(messagingResponse, context, services) {
+      // TODO: Generar alerta a operador en despacho
+
+      await services.messaging.sendMessage(
+        messagingResponse.from,
+        'Perfecto. En breve le enviaremos los costos de su requerimiento.',
+      );
+
+      return {
+        nextState: 'START',
+        lastInteraction: new Date().toISOString(),
+        currentState: 'WAITING_DOMICILE_CONFIRMATION',
+      };
+    },
+  },
+  WAITING_MUNICIPIO_TRANSFER: {
+    async handle(messagingResponse, context, services) {
+      // TODO: Generar alerta a operador en despacho
+
+      const municipio = messagingResponse.body.trim();
+
+      // TODO: convertir esto en lista
+      if (!municipio) {
+        await services.messaging.sendMessage(
+          messagingResponse.from,
+          'Por favor, indica un municipio para continuar.',
+        );
+
+        return {
+          nextState: 'WAITING_MUNICIPIO',
+          lastInteraction: new Date().toISOString(),
+          currentState: 'WAITING_MUNICIPIO',
+        };
+      }
+
+      await services.messaging.sendMessage(
+        messagingResponse.from,
+        `Para el municipio ${municipio}, el costo es de x. ¿Deseas solicitar el servicio? (Sí/No)`,
+      );
+
+      return {
+        nextState: 'WAITING_CONFIRMATION_TRANSFER',
+        lastInteraction: new Date().toISOString(),
+        currentState: 'WAITING_DOMICILE_CONFIRMATION',
+      };
+    },
+  },
+  WAITING_CONFIRMATION_TRANSFER: {
+    async handle(messagingResponse, context, services) {
+      const response = messagingResponse.body.toLowerCase().trim();
+
+      if (response === 'no') {
+        await services.messaging.sendMessage(
+          messagingResponse.from,
+          'Entendido. ¿Hay algo más en lo que pueda ayudarte?',
+        );
+
+        return {
+          nextState: 'START',
+          lastInteraction: new Date().toISOString(),
+          currentState: 'WAITING_CONFIRMATION_TRANSFER',
+        };
+      }
+
+      if (response === 'sí' || response === 'si') {
+        // TODO debe permitir location en mapa
+        await services.messaging.sendMessage(
+          messagingResponse.from,
+          'Por favor, envíame tu ubicación exacta, para que nuestra unidad llegue de manera inmediata.',
+        );
+
+        return {
+          nextState: 'WAITING_LOCATION_TRANSFER',
+          lastInteraction: new Date().toISOString(),
+          currentState: 'WAITING_CONFIRMATION_TRANSFER',
+        };
+      }
+
+      await services.messaging.sendMessage(
+        messagingResponse.from,
+        'Por favor, responde con "Sí" o "No".',
+      );
+
+      return {
+        nextState: 'WAITING_CONFIRMATION_TRANSFER',
+        lastInteraction: new Date().toISOString(),
+        currentState: 'WAITING_CONFIRMATION_TRANSFER',
+      };
+    },
+  },
+  WAITING_LOCATION_TRANSFER: {
+    async handle(messagingResponse, context, services) {
+      // TODO: Generar alerta a operador en despacho
+
+      await services.messaging.sendMessage(
+        messagingResponse.from,
+        'Perfecto. Un operador se comunicará contigo para confirmar los detalles.',
+      );
+
+      return {
+        nextState: 'START',
+        lastInteraction: new Date().toISOString(),
+        currentState: 'WAITING_DOMICILE_CONFIRMATION',
+      };
+    },
+  },
+  WAITING_APPOINTMENT_CONFIRMATION: {
+    async handle(messagingResponse, context, services) {
+      const response = messagingResponse.body.toLowerCase().trim();
+
+      if (response === 'no') {
+        await services.messaging.sendMessage(
+          messagingResponse.from,
+          'De acuerdo. Si necesitas algo más, no dudes en consultarme.',
+        );
+
+        return {
+          nextState: 'START',
+          lastInteraction: new Date().toISOString(),
+          currentState: 'WAITING_APPOINTMENT_CONFIRMATION',
+        };
+      }
+
+      if (response === 'sí' || response === 'si') {
+        // TODO: Transfer conversation to operator at 04227426301
+        console.log(
+          `Transferir conversación para cita de ${messagingResponse.from}`,
+        );
+
+        await services.messaging.sendMessage(
+          messagingResponse.from,
+          '¡Excelente! Te estoy transfiriendo con nuestro personal de control de citas.',
+        );
+
+        return {
+          nextState: 'START',
+          lastInteraction: new Date().toISOString(),
+          currentState: 'WAITING_APPOINTMENT_CONFIRMATION',
+        };
+      }
+
+      await services.messaging.sendMessage(
+        messagingResponse.from,
+        'Por favor, responde con "Sí" o "No".',
+      );
+
+      return {
+        nextState: 'WAITING_APPOINTMENT_CONFIRMATION',
+        lastInteraction: new Date().toISOString(),
+        currentState: 'WAITING_APPOINTMENT_CONFIRMATION',
       };
     },
   },

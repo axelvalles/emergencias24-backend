@@ -14,6 +14,18 @@ export class PrivatePlan {
   @Column({ type: 'int', default: 1 })
   max_beneficiaries: number;
 
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  family_discount: number;
+
+  @Column({ type: 'boolean', default: false })
+  includes_preventive_care: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  includes_dental: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  includes_vision: boolean;
+
   // --- Relationships ---
   @OneToOne(() => Plan, (plan) => plan.private_plan_details, {
     onDelete: 'CASCADE',

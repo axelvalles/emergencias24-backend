@@ -13,10 +13,10 @@ export class SessionStoreService {
 
     if (!data) {
       return {
-        currentState: 'SEND_MAIN_MENU',
+        currentState: 'START',
         from: from,
         lastInteraction: new Date().toISOString(),
-        previousState: 'SEND_MAIN_MENU',
+        previousState: 'START',
         patient: null,
       };
     }

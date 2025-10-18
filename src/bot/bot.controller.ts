@@ -13,9 +13,9 @@ export class BotController {
   async handleIncomingMessage(@Body() payload: TwilioIncomingMessage) {
     const from = payload.From;
     const body = payload.Body;
-    this.logger.log(payload);
+    const profileName = payload.ProfileName || '';
 
-    await this.botService.handleMessage({ body, from });
+    await this.botService.handleMessage({ body, from, profileName });
 
     return { ok: true };
   }

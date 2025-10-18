@@ -7,6 +7,7 @@ import {
   ManyToOne,
   JoinColumn,
   OneToMany,
+  CreateDateColumn,
 } from 'typeorm';
 import { Patient } from '../../patients/entities/patient.entity';
 import { Plan } from '../../plans/entities/plan.entity';
@@ -24,6 +25,33 @@ export class Subscription {
 
   @Column({ type: 'varchar', length: 50, default: 'Active' })
   subscription_status: string;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  total_cost: number;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  payment_method: string;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  payment_reference: string;
+
+  @Column({ type: 'date', nullable: true })
+  last_payment_date: Date;
+
+  @Column({ type: 'date', nullable: true })
+  next_payment_date: Date;
+
+  @Column({ type: 'boolean', default: false })
+  auto_renewal: boolean;
+
+  @Column({ type: 'text', nullable: true })
+  notes: string;
+
+  @CreateDateColumn({ type: 'timestamp' })
+  created_at: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  updated_at: Date;
 
   // --- Relationships ---
 

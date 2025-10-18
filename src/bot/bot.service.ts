@@ -15,9 +15,15 @@ export class BotService {
     private readonly patientsService: PatientsService,
   ) {}
 
-  async handleMessage(payload: { from: string; body: string }) {
+  async handleMessage(payload: {
+    from: string;
+    body: string;
+    profileName: string;
+  }) {
     const from = payload.from;
     const body = payload.body.trim().toLowerCase();
+    const profileName = payload.profileName;
+    console.log(from);
 
     const userState = await this.sessionStore.getSession(from);
 
@@ -25,17 +31,9 @@ export class BotService {
       cmd.keywords.includes(body),
     );
 
-    console.log('body', body);
-
-    this.logger.log(
-      `Validación de comandos globales: ${JSON.stringify(matchedCommand, null, 2)}`,
-    );
-
     if (matchedCommand) {
-      this.logger.log(`Comando global detectado: ${body}`);
-
       const result = await matchedCommand.execute(
-        { from, patient: userState.patient },
+        { from, profileName, patient: userState.patient },
         {
           messaging: this.messaging,
           sessionStore: this.sessionStore,
@@ -53,10 +51,6 @@ export class BotService {
 
       return;
     }
-
-    this.logger.log(`Estado actual: ${userState.currentState}`);
-    this.logger.log(`Estado anterior: ${userState.previousState}`);
-    this.logger.log(`Ultima interacción: ${userState.lastInteraction}`);
 
     const stateHandler = stateMachineConfig[userState.currentState];
     const result = await stateHandler.handle(payload, userState, {

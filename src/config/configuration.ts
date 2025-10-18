@@ -25,6 +25,9 @@ export const envSchema = z.object({
   // Redis
   REDIS_URL: z.url(),
 
+  // Auth
+  JWT_SECRET: z.string().min(5),
+
   // Otros
   PORT: z.coerce.number().default(3000),
 });

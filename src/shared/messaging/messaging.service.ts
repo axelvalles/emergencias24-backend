@@ -1,4 +1,3 @@
-// src/messaging/messaging.service.ts
 import { Inject, Injectable } from '@nestjs/common';
 import { IMessagingProvider } from './interfaces/messaging.interface';
 
@@ -18,6 +17,8 @@ export class MessagingService {
     templateName: string,
     params?: Record<string, string | number>,
   ) {
+    console.log(params);
+
     return this.messagingProvider.sendTemplate(to, templateName, params);
   }
 }

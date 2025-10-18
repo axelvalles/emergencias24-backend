@@ -17,6 +17,21 @@ export class CorporatePlan {
   @Column({ type: 'varchar', length: 150, nullable: true })
   company_contact: string;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  company_address: string;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  company_email: string;
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  company_phone: string;
+
+  @Column({ type: 'int', nullable: true })
+  number_of_employees: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  employee_contribution_percentage: number;
+
   // --- Relationships ---
   @OneToOne(() => Plan, (plan) => plan.corporate_plan_details, {
     onDelete: 'CASCADE',

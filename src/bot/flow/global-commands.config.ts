@@ -13,6 +13,7 @@ type Services = {
 type Context = {
   from: string;
   patient: any;
+  profileName: string;
 };
 
 export type GlobalCommandHandler = {
@@ -32,10 +33,10 @@ export const globalCommands: GlobalCommandHandler[] = [
       await services.messaging.sendTemplate(
         context.from,
         TWILIO_TEMPLATES.MAIN_MENU,
+        { name: context.profileName },
       );
 
-      // Reinicia el estado a SEND_MAIN_MENU
-      return { nextState: 'WAITING_MAIN_MENU_RESPONSE' };
+      return { nextState: 'WAITING_MENU_OPTION' };
     },
   },
   {
@@ -45,7 +46,7 @@ export const globalCommands: GlobalCommandHandler[] = [
         context.from,
         '📖 Puedes escribir "menu" para volver al menú principal o "ayuda" para ver este mensaje nuevamente.',
       );
-      return { nextState: 'WAITING_MAIN_MENU_RESPONSE' };
+      return { nextState: 'START' };
     },
   },
 ];

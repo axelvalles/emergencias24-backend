@@ -10,6 +10,11 @@ import { PatientsModule } from './patients/patients.module';
 import { PlansModule } from './plans/plans.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { ClinicalRecordsModule } from './clinical-records/clinical-records.module';
+import { DoctorsModule } from './doctors/doctors.module';
+import { SpecialtiesModule } from './specialties/specialties.module';
+import { UsersModule } from './users/users.module';
+import { AuthModule } from './auth/auth.module';
+import { MessagingModule } from './shared/messaging/messaging.module';
 import twilioConfig from './config/twilio.config';
 import { dbConfig, typeOrmFactory } from './config/db.config';
 import { envSchema } from './config/configuration';
@@ -62,11 +67,16 @@ import { envSchema } from './config/configuration';
       useFactory: typeOrmFactory,
       inject: [ConfigService],
     }),
+    MessagingModule,
     BotModule,
     PatientsModule,
     PlansModule,
     SubscriptionsModule,
     ClinicalRecordsModule,
+    DoctorsModule,
+    SpecialtiesModule,
+    UsersModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

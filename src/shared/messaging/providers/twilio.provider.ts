@@ -52,11 +52,13 @@ export class TwilioMessagingProvider implements IMessagingProvider {
     templateName: string,
     params?: Record<string, string | number>,
   ) {
+    console.log(params);
+
     await this.client.messages.create({
       contentSid: templateName,
       from: this.phoneNumber,
       to,
-      contentVariables: params ? JSON.stringify(params) : undefined,
+      contentVariables: params ? JSON.stringify(params) : undefined, // ✅
     });
   }
 }

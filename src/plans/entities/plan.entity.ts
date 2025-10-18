@@ -6,6 +6,7 @@ import {
   Column,
   OneToMany,
   OneToOne,
+  CreateDateColumn,
 } from 'typeorm';
 import { Subscription } from '../../subscriptions/entities/subscription.entity';
 import { PrivatePlan } from './private-plan.entity';
@@ -38,6 +39,39 @@ export class Plan {
 
   @Column({ type: 'varchar', length: 50, default: 'Active' })
   status: string;
+
+  @Column({ type: 'int', default: 1 })
+  coverage_period_months: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  deductible: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  copayment: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  coinsurance: number;
+
+  @Column({ type: 'int', nullable: true })
+  max_annual_coverage: number;
+
+  @Column({ type: 'text', nullable: true })
+  coverage_details: string;
+
+  @Column({ type: 'text', nullable: true })
+  exclusions: string;
+
+  @Column({ type: 'date', nullable: true })
+  effective_date: Date;
+
+  @Column({ type: 'date', nullable: true })
+  expiration_date: Date;
+
+  @CreateDateColumn({ type: 'timestamp' })
+  created_at: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  updated_at: Date;
 
   // --- Relationships ---
 
