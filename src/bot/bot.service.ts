@@ -1,44 +1,102 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { CommandRegistry } from './commands/command-registry';
-import { TwilioWebhookDto } from './dto/twilio-webhook.dto';
 import { SessionStoreService } from './session-store.service';
-import { FlowState } from './interfaces/flows.enum';
-import { TwilioService } from 'src/shared/twilio.service';
+import { MessagingService } from 'src/shared/messaging/messaging.service';
+import { PatientsService } from 'src/patients/patients.service';
+import { TicketsService } from 'src/tickets/tickets.service';
+import { globalCommands } from './state-machine/global-commands.config';
+import { stateMachine } from './state-machine';
 
 @Injectable()
 export class BotService {
   private readonly logger = new Logger(BotService.name);
 
   constructor(
-    private readonly twilio: TwilioService,
+    private readonly messaging: MessagingService,
     private readonly sessionStore: SessionStoreService,
-    private readonly commandRegistry: CommandRegistry,
+    private readonly patientsService: PatientsService,
+    private readonly ticketsService: TicketsService,
   ) {}
 
-  async handleMessage(payload: TwilioWebhookDto) {
-    const session = await this.sessionStore.getSession(payload.From);
+  async handleMessage(payload: {
+    from: string;
+    body: string;
+    profileName: string;
+    location: { latitude: string; longitude: string } | null;
+  }) {
+    const from = payload.from;
+    const body = payload.body.trim().toLowerCase();
+    const profileName = payload.profileName;
 
-    // await this.sessionStore.clearSession(payload.From);
-    // this.logger.log(`Se borro la sesion de ${payload.From}`);
-    // return;
+    const services = {
+      messaging: this.messaging,
+      sessionStore: this.sessionStore,
+      patientsService: this.patientsService,
+      ticketsService: this.ticketsService,
+    };
 
-    const command = this.commandRegistry.getCommand(session.state);
+    const userState = await this.sessionStore.getSession(from);
 
-    this.logger.log(
-      `User ${payload.From} - State: ${session.state} - Message: ${payload.Body}`,
-    );
+    const now = Date.now();
 
-    if (command) {
-      await command.execute(payload, session);
-    } else {
-      await this.twilio.sendMessage(
-        payload.From,
-        'Estamos en mantenimiento por favor intentalo mas tarde',
-      );
-      session.state = FlowState.WAITING_MAIN_MENU;
+    if (userState && userState.lastInteraction) {
+      const lastInteractionTime = new Date(userState.lastInteraction).getTime();
+      const diff = now - lastInteractionTime;
+
+      if (diff > 3600000) {
+        const result = await globalCommands[0].execute(
+          { from, profileName, patient: userState.patient },
+          {
+            messaging: this.messaging,
+            sessionStore: this.sessionStore,
+            patientsService: this.patientsService,
+          },
+        );
+
+        await this.sessionStore.setSession(from, {
+          currentState: result.nextState,
+          from,
+          lastInteraction: new Date().toISOString(),
+          previousState: userState.currentState,
+          patient: userState.patient,
+        });
+
+        return;
+      }
     }
 
-    session.lastInteraction = new Date();
-    await this.sessionStore.setSession(payload.From, session);
+    const matchedCommand = globalCommands.find((cmd) =>
+      cmd.keywords.includes(body),
+    );
+
+    if (matchedCommand) {
+      const result = await matchedCommand.execute(
+        {
+          from,
+          profileName,
+          patient: userState.patient,
+        },
+        {
+          messaging: this.messaging,
+          sessionStore: this.sessionStore,
+          patientsService: this.patientsService,
+        },
+      );
+
+      await this.sessionStore.setSession(from, {
+        currentState: result.nextState,
+        from,
+        lastInteraction: new Date().toISOString(),
+        previousState: userState.currentState,
+        patient: userState.patient,
+      });
+
+      return;
+    }
+
+    const handler = stateMachine[userState.currentState];
+
+    const result = await handler.handle(payload, userState, services);
+
+    await this.sessionStore.setCurentState(from, result.nextState);
   }
 }

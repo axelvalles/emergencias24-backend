@@ -1,24 +1,57 @@
-import { IsString, IsOptional } from 'class-validator';
+import { IsString, IsEnum, IsOptional, IsJSON } from 'class-validator';
 
-export class TwilioWebhookDto {
+export class TwilioIncomingMessageDto {
   @IsString()
-  From: string;
+  SmsMessageSid: string;
+
+  @IsString()
+  NumMedia: string;
+
+  @IsString()
+  ProfileName: string;
+
+  @IsEnum(['text', 'image', 'video', 'audio', 'document'], {
+    message: 'MessageType must be a valid Twilio message type',
+  })
+  @IsOptional()
+  MessageType?: string;
+
+  @IsString()
+  SmsSid: string;
+
+  @IsString()
+  WaId: string;
+
+  @IsEnum(['received', 'sent', 'failed'], {
+    message: 'SmsStatus must be a valid Twilio SMS status',
+  })
+  @IsOptional()
+  SmsStatus?: string;
+
+  @IsString()
+  Body: string;
 
   @IsString()
   To: string;
 
   @IsString()
-  Body: string;
+  NumSegments: string;
 
-  @IsOptional()
   @IsString()
-  MessageType?: 'text' | 'image' | 'audio' | 'video' | 'document' | 'location';
+  ReferralNumMedia: string;
 
-  @IsOptional()
   @IsString()
-  Latitude?: string;
+  MessageSid: string;
 
-  @IsOptional()
   @IsString()
-  Longitude?: string;
+  AccountSid: string;
+
+  @IsJSON()
+  ChannelMetadata: string; // Se envía como string JSON
+
+  @IsString()
+  From: string;
+
+  @IsString()
+  ApiVersion: string;
 }

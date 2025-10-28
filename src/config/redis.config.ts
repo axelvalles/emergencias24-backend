@@ -1,9 +1,17 @@
 import { RedisModuleOptions } from '@nestjs-modules/ioredis';
-import { ConfigService } from '@nestjs/config';
+import { ConfigService, ConfigType, registerAs } from '@nestjs/config';
 
-export const redisConfig = (
+export const redisConfig = registerAs('redis', () => ({
+  url: String(process.env.REDIS_URL),
+}));
+
+export const redisFactory = (
   configService: ConfigService,
-): RedisModuleOptions => ({
-  type: 'single',
-  url: configService.get<string>('REDIS_URL'),
-});
+): RedisModuleOptions => {
+  const redisCfg = configService.get<ConfigType<typeof redisConfig>>('redis');
+
+  return {
+    type: 'single',
+    url: redisCfg!.url,
+  };
+};

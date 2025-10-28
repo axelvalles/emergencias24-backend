@@ -1,0 +1,14 @@
+import * as dotenv from 'dotenv';
+
+import { DataSource } from 'typeorm';
+
+dotenv.config();
+
+export default new DataSource({
+  type: 'postgres',
+  url: process.env.POSTGRES_URL,
+  entities: [__dirname + '/../**/*.entity.{ts,js}'],
+  migrations: [__dirname + '/../migrations/*.{ts,js}'],
+  synchronize: false, // nunca en prod
+  logging: true,
+});
