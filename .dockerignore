@@ -1,1 +1,15 @@
+node_modules
 dist
+.git
+.gitignore
+Dockerfile
+fly.toml
+README.md
+.env
+.env.*
+*.log
+tmp
+.cache
+coverage
+.idea
+.vscode

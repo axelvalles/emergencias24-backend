@@ -1,17 +1,21 @@
-# Etapa 1: Build
-FROM node:20-alpine AS builder
+# Etapa de build
+FROM node:20 AS builder
 WORKDIR /app
+
 COPY package*.json ./
 RUN npm ci
+
 COPY . .
 RUN npm run build
 
-# Etapa 2: Runtime
-FROM node:20-alpine
+# Etapa de runtime
+FROM node:20-alpine AS runner
 WORKDIR /app
+
 COPY --from=builder /app/package*.json ./
-RUN npm ci --omit=dev
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 
-EXPOSE 3000
+EXPOSE 8080
+
 CMD ["node", "dist/main.js"]
