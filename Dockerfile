@@ -23,7 +23,7 @@ COPY --from=builder /app/dist ./dist
 
 # Configura variables de entorno (opcional)
 ENV NODE_ENV=production
-EXPOSE 8080
+EXPOSE 3000
 
 # Comando de arranque
 CMD ["node", "dist/main.js"]
