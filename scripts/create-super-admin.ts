@@ -4,7 +4,7 @@ import * as bcrypt from 'bcrypt';
 
 // Ajusta las importaciones según tu estructura real
 import { User, UserRole } from '../src/users/entities/user.entity';
-import ScriptDataSource from 'src/config/typeorm-cli.config';
+import ScriptDataSource from '../src/config/typeorm-cli.config';
 // Si tus entidades están en otras rutas, actualiza las rutas de importación.
 
 async function main() {
