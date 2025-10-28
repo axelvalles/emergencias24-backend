@@ -1,12 +1,27 @@
 // src/plans/entities/private-plan.entity.ts
 
-import { Entity, PrimaryColumn, Column, OneToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  OneToOne,
+  JoinColumn,
+  PrimaryGeneratedColumn,
+  BeforeInsert,
+} from 'typeorm';
 import { Plan } from './plan.entity';
+import { uuidv7 } from 'uuidv7';
 
 @Entity('private_plans')
 export class PrivatePlan {
-  @PrimaryColumn()
-  plan_id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @BeforeInsert()
+  generateUuid() {
+    if (!this.id) {
+      this.id = uuidv7();
+    }
+  }
 
   @Column({ type: 'varchar', length: 100 })
   category: string; // e.g., "Family", "Individual", "Telemedicine"

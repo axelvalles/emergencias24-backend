@@ -7,14 +7,23 @@ import {
   CreateDateColumn,
   ManyToOne,
   JoinColumn,
+  BeforeInsert,
 } from 'typeorm';
 import { Patient } from '../../patients/entities/patient.entity';
 import { Doctor } from '../../doctors/entities/doctor.entity';
+import { uuidv7 } from 'uuidv7';
 
 @Entity('clinical_records')
 export class ClinicalRecord {
-  @PrimaryGeneratedColumn()
-  record_id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @BeforeInsert()
+  generateUuid() {
+    if (!this.id) {
+      this.id = uuidv7();
+    }
+  }
 
   @CreateDateColumn({ type: 'timestamp' })
   appointment_date: Date;

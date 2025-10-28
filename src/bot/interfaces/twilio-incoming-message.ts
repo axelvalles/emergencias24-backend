@@ -15,5 +15,7 @@ export interface TwilioIncomingMessage {
   ListDescription?: string;
   ChannelMetadata?: string;
   ApiVersion?: string;
+  Latitude?: string;
+  Longitude?: string;
   [key: string]: any; // <-- permite campos nuevos sin romper el tipado
 }

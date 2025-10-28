@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import Redis from 'ioredis';
 import { BotSession } from './interfaces/bot-session.interface';
 import { Patient } from 'src/patients/entities/patient.entity';
+import { BotStates } from './state-machine/types';
 
 @Injectable()
 export class SessionStoreService {
@@ -39,7 +40,26 @@ export class SessionStoreService {
     await this.setSession(from, session);
   }
 
+  async setMunicipality(from: string, municipality: string): Promise<void> {
+    const session = await this.getSession(from);
+    session.municipality = municipality;
+    await this.setSession(from, session);
+  }
+
+  async setSpeciality(from: string, speciality: string): Promise<void> {
+    const session = await this.getSession(from);
+    session.speciality = speciality;
+    await this.setSession(from, session);
+  }
+
   async clearSession(from: string): Promise<void> {
     await this.redis.del(`session:${from}`);
+  }
+
+  async setCurentState(from: string, state: BotStates): Promise<void> {
+    const session = await this.getSession(from);
+    session.currentState = state;
+    session.lastInteraction = new Date().toISOString();
+    await this.setSession(from, session);
   }
 }

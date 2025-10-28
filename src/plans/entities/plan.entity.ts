@@ -7,10 +7,12 @@ import {
   OneToMany,
   OneToOne,
   CreateDateColumn,
+  BeforeInsert,
 } from 'typeorm';
 import { Subscription } from '../../subscriptions/entities/subscription.entity';
 import { PrivatePlan } from './private-plan.entity';
 import { CorporatePlan } from './corporate-plan.entity';
+import { uuidv7 } from 'uuidv7';
 
 export enum PlanType {
   PRIVATE = 'Private',
@@ -19,8 +21,15 @@ export enum PlanType {
 
 @Entity('plans')
 export class Plan {
-  @PrimaryGeneratedColumn()
-  plan_id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @BeforeInsert()
+  generateUuid() {
+    if (!this.id) {
+      this.id = uuidv7();
+    }
+  }
 
   @Column({ type: 'varchar', length: 150, unique: true })
   plan_name: string;

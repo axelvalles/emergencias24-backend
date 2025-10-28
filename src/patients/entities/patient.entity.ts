@@ -1,4 +1,3 @@
-import { User } from 'src/users/entities/user.entity';
 import { ClinicalRecord } from 'src/clinical-records/entities/clinical-record.entity';
 import { Subscription } from 'src/subscriptions/entities/subscription.entity';
 import {
@@ -7,19 +6,21 @@ import {
   Column,
   CreateDateColumn,
   OneToMany,
-  OneToOne,
-  JoinColumn,
+  BeforeInsert,
 } from 'typeorm';
+import { uuidv7 } from 'uuidv7';
 
 @Entity('patients')
 export class Patient {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-  // Relationship with User
-  @OneToOne(() => User, (user) => user.id, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'user_id' })
-  user: User;
+  @BeforeInsert()
+  generateUuid() {
+    if (!this.id) {
+      this.id = uuidv7();
+    }
+  }
 
   @Column({ type: 'varchar', length: 100 })
   first_name: string;

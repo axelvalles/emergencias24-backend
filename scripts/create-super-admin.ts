@@ -1,14 +1,10 @@
 // scripts/create-superuser.ts
 import 'reflect-metadata';
 import * as bcrypt from 'bcrypt';
-import * as dotenv from 'dotenv';
-
-dotenv.config();
 
 // Ajusta las importaciones según tu estructura real
 import { User, UserRole } from '../src/users/entities/user.entity';
-import { Admin } from '../src/users/entities/admin.entity';
-import { ScriptDataSource } from 'src/config/typeorm-cli.config';
+import ScriptDataSource from 'src/config/typeorm-cli.config';
 // Si tus entidades están en otras rutas, actualiza las rutas de importación.
 
 async function main() {
@@ -26,7 +22,6 @@ async function main() {
   console.log('DataSource initialized');
 
   const userRepo = ScriptDataSource.getRepository(User);
-  const adminRepo = ScriptDataSource.getRepository(Admin);
 
   // Cambia los valores por lo que quieras
   const email = process.env.SUPERUSER_EMAIL || 'superadmin@example.com';
@@ -53,24 +48,15 @@ async function main() {
     password_hash: passwordHash,
     roles: [UserRole.SUPER_ADMIN],
     is_active: true,
+    first_name: firstName,
+    last_name: lastName,
+    phone: process.env.SUPERUSER_PHONE || null,
   });
 
   const savedUser = await userRepo.save(user);
-  console.log(`User created with id=${savedUser.id}`);
 
-  // Crear entidad admin y asociarla al user (usando user_id FK)
-  const admin = adminRepo.create({
-    first_name: firstName,
-    last_name: lastName,
-    department: 'platform',
-    phone: process.env.SUPERUSER_PHONE || null,
-    position: 'super_admin',
-    user: savedUser,
-  });
-
-  const savedAdmin = await adminRepo.save(admin);
   console.log(
-    `Admin profile created with id=${savedAdmin.id} linked to user.id=${savedUser.id}`,
+    `Admin profile created with id=${savedUser.id} linked to user.id=${savedUser.id}`,
   );
 
   console.log('Superuser creation complete:');

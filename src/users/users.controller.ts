@@ -50,30 +50,30 @@ export class UsersController {
     UserRole.OPERATOR,
   )
   findOne(@Param('id') id: string) {
-    return this.usersService.findOne(+id);
+    return this.usersService.findOne(id);
   }
 
   @Patch(':id')
   @Roles(UserRole.CLINIC_ADMIN, UserRole.SUPER_ADMIN)
   update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(+id, updateUserDto);
+    return this.usersService.update(id, updateUserDto);
   }
 
   @Delete(':id')
   @Roles(UserRole.CLINIC_ADMIN, UserRole.SUPER_ADMIN)
   remove(@Param('id') id: string) {
-    return this.usersService.remove(+id);
+    return this.usersService.remove(id);
   }
 
   @Post(':id/activate')
   @Roles(UserRole.CLINIC_ADMIN, UserRole.SUPER_ADMIN)
   activate(@Param('id') id: string) {
-    return this.usersService.activateUser(+id);
+    return this.usersService.activateUser(id);
   }
 
   @Post(':id/deactivate')
   @Roles(UserRole.CLINIC_ADMIN, UserRole.SUPER_ADMIN)
   deactivate(@Param('id') id: string) {
-    return this.usersService.deactivateUser(+id);
+    return this.usersService.deactivateUser(id);
   }
 }

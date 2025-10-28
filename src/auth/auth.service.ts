@@ -36,7 +36,7 @@ export class AuthService {
     const user = this.userRepository.create({
       email,
       password_hash: password,
-      roles: registerDto.roles || [UserRole.PATIENT],
+      roles: registerDto.roles || [UserRole.CLINIC_ADMIN],
     });
 
     // Hash password
@@ -98,7 +98,7 @@ export class AuthService {
     return { access_token, user: userWithoutPassword };
   }
 
-  async validateUser(userId: number): Promise<User | null> {
+  async validateUser(userId: string): Promise<User | null> {
     return this.userRepository.findOne({
       where: { id: userId, is_active: true },
     });

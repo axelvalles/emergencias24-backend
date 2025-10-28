@@ -5,12 +5,21 @@ import {
   Column,
   CreateDateColumn,
   OneToMany,
+  BeforeInsert,
 } from 'typeorm';
+import { uuidv7 } from 'uuidv7';
 
 @Entity('specialties')
 export class Specialty {
-  @PrimaryGeneratedColumn()
-  specialty_id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @BeforeInsert()
+  generateUuid() {
+    if (!this.id) {
+      this.id = uuidv7();
+    }
+  }
 
   @Column({ type: 'varchar', length: 100, unique: true })
   name: string;

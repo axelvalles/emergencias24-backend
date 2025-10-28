@@ -1,5 +1,5 @@
 import { Patient } from 'src/patients/entities/patient.entity';
-import { BotStates } from '../flow/state-machine.config';
+import { BotStates } from '../state-machine/types';
 
 export interface BotSession {
   from: string;
@@ -7,4 +7,6 @@ export interface BotSession {
   previousState: BotStates;
   currentState: BotStates;
   patient: Patient | null;
+  municipality?: string;
+  speciality?: string;
 }

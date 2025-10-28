@@ -50,18 +50,18 @@ export class PatientsController {
     UserRole.OPERATOR,
   )
   findOne(@Param('id') id: string) {
-    return this.patientsService.findOne(+id);
+    return this.patientsService.findOne(id);
   }
 
   @Patch(':id')
   @Roles(UserRole.DOCTOR, UserRole.NURSE, UserRole.RECEPTIONIST)
   update(@Param('id') id: string, @Body() updatePatientDto: UpdatePatientDto) {
-    return this.patientsService.update(+id, updatePatientDto);
+    return this.patientsService.update(id, updatePatientDto);
   }
 
   @Delete(':id')
   @Roles(UserRole.CLINIC_ADMIN, UserRole.SUPER_ADMIN)
   remove(@Param('id') id: string) {
-    return this.patientsService.remove(+id);
+    return this.patientsService.remove(id);
   }
 }

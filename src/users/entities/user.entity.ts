@@ -4,12 +4,10 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
-  OneToOne,
+  BeforeInsert,
 } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { Patient } from 'src/patients/entities/patient.entity';
-import { Doctor } from 'src/doctors/entities/doctor.entity';
-import { Admin } from './admin.entity';
+import { uuidv7 } from 'uuidv7';
 
 export enum UserRole {
   SUPER_ADMIN = 'super_admin',
@@ -17,7 +15,6 @@ export enum UserRole {
   OPERATOR = 'operator',
   DOCTOR = 'doctor',
   NURSE = 'nurse',
-  PATIENT = 'patient',
   RECEPTIONIST = 'receptionist',
   LAB_ADMIN = 'lab_admin',
   FINANCE = 'finance',
@@ -25,8 +22,24 @@ export enum UserRole {
 
 @Entity('users')
 export class User {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @BeforeInsert()
+  generateUuid() {
+    if (!this.id) {
+      this.id = uuidv7();
+    }
+  }
+
+  @Column({ type: 'varchar', length: 100 })
+  first_name: string;
+
+  @Column({ type: 'varchar', length: 100 })
+  last_name: string;
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  phone: string | null;
 
   @Column({ type: 'varchar', length: 100, unique: true })
   email: string;
@@ -38,7 +51,7 @@ export class User {
     type: 'enum',
     enum: UserRole,
     array: true,
-    default: [UserRole.PATIENT],
+    default: [UserRole.CLINIC_ADMIN],
   })
   roles: UserRole[];
 
@@ -53,16 +66,6 @@ export class User {
 
   @Column({ type: 'timestamp', nullable: true })
   last_login: Date;
-
-  // Relationships (will be added when role-specific entities are updated)
-  @OneToOne(() => Patient, (patient) => patient.user)
-  patient: Patient;
-
-  @OneToOne(() => Doctor, (doctor) => doctor.user)
-  doctor: Doctor;
-
-  @OneToOne(() => Admin, (admin) => admin.user)
-  admin: Admin;
 
   // Methods
   async hashPassword(): Promise<void> {

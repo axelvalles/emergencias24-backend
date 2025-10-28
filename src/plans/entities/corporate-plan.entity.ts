@@ -1,12 +1,27 @@
 // src/plans/entities/corporate-plan.entity.ts
 
-import { Entity, PrimaryColumn, Column, OneToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  OneToOne,
+  JoinColumn,
+  PrimaryGeneratedColumn,
+  BeforeInsert,
+} from 'typeorm';
 import { Plan } from './plan.entity';
+import { uuidv7 } from 'uuidv7';
 
 @Entity('corporate_plans')
 export class CorporatePlan {
-  @PrimaryColumn()
-  plan_id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @BeforeInsert()
+  generateUuid() {
+    if (!this.id) {
+      this.id = uuidv7();
+    }
+  }
 
   @Column({ type: 'varchar', length: 200 })
   company_name: string;

@@ -32,16 +32,11 @@ export class PatientsService {
         patient_status: true,
         created_at: true,
         updated_at: true,
-        user: {
-          id: true,
-          email: true,
-          is_active: true,
-        },
       },
     });
   }
 
-  async findOne(id: number): Promise<Patient> {
+  async findOne(id: string): Promise<Patient> {
     const patient = await this.patientRepository.findOne({
       where: { id },
       relations: ['user', 'subscriptions', 'clinical_records'],
@@ -68,11 +63,6 @@ export class PatientsService {
         medical_record_number: true,
         created_at: true,
         updated_at: true,
-        user: {
-          id: true,
-          email: true,
-          is_active: true,
-        },
       },
     });
 
@@ -97,15 +87,8 @@ export class PatientsService {
     });
   }
 
-  async findByUserId(userId: number): Promise<Patient | null> {
-    return this.patientRepository.findOne({
-      where: { user: { id: userId } },
-      relations: ['user', 'subscriptions', 'clinical_records'],
-    });
-  }
-
   async update(
-    id: number,
+    id: string,
     updatePatientDto: UpdatePatientDto,
   ): Promise<Patient> {
     const patient = await this.findOne(id);
@@ -117,19 +100,19 @@ export class PatientsService {
     return this.patientRepository.save(patient);
   }
 
-  async remove(id: number): Promise<void> {
+  async remove(id: string): Promise<void> {
     const patient = await this.findOne(id);
     await this.patientRepository.remove(patient);
   }
 
-  async activatePatient(id: number): Promise<Patient> {
+  async activatePatient(id: string): Promise<Patient> {
     const patient = await this.findOne(id);
     patient.patient_status = 'Active';
     patient.updated_at = new Date();
     return this.patientRepository.save(patient);
   }
 
-  async deactivatePatient(id: number): Promise<Patient> {
+  async deactivatePatient(id: string): Promise<Patient> {
     const patient = await this.findOne(id);
     patient.patient_status = 'Inactive';
     patient.updated_at = new Date();
@@ -146,10 +129,6 @@ export class PatientsService {
         last_name: true,
         phone: true,
         patient_status: true,
-        user: {
-          id: true,
-          email: true,
-        },
       },
     });
   }

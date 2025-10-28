@@ -8,14 +8,23 @@ import {
   JoinColumn,
   OneToMany,
   CreateDateColumn,
+  BeforeInsert,
 } from 'typeorm';
 import { Patient } from '../../patients/entities/patient.entity';
 import { Plan } from '../../plans/entities/plan.entity';
+import { uuidv7 } from 'uuidv7';
 
 @Entity('subscriptions')
 export class Subscription {
-  @PrimaryGeneratedColumn()
-  subscription_id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @BeforeInsert()
+  generateUuid() {
+    if (!this.id) {
+      this.id = uuidv7();
+    }
+  }
 
   @Column({ type: 'date' })
   start_date: Date;

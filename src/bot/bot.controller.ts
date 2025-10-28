@@ -12,10 +12,19 @@ export class BotController {
   @HttpCode(200)
   async handleIncomingMessage(@Body() payload: TwilioIncomingMessage) {
     const from = payload.From;
-    const body = payload.Body;
+    const body = payload.Body || '';
     const profileName = payload.ProfileName || '';
+    const location =
+      payload.Latitude && payload.Longitude
+        ? {
+            latitude: payload.Latitude,
+            longitude: payload.Longitude,
+          }
+        : null;
 
-    await this.botService.handleMessage({ body, from, profileName });
+    console.log(payload);
+
+    await this.botService.handleMessage({ body, from, profileName, location });
 
     return { ok: true };
   }

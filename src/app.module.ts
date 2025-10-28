@@ -15,6 +15,7 @@ import { SpecialtiesModule } from './specialties/specialties.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { MessagingModule } from './shared/messaging/messaging.module';
+import { TicketsModule } from './tickets/tickets.module';
 import twilioConfig from './config/twilio.config';
 import { dbConfig, typeOrmFactory } from './config/db.config';
 import { envSchema } from './config/configuration';
@@ -68,6 +69,7 @@ import { envSchema } from './config/configuration';
       inject: [ConfigService],
     }),
     MessagingModule,
+    TicketsModule,
     BotModule,
     PatientsModule,
     PlansModule,

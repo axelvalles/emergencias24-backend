@@ -16,11 +16,7 @@ export const envSchema = z.object({
   WHATSAPP_VERIFY_TOKEN: z.string().min(1),
 
   // DB
-  DB_HOST: z.string(),
-  DB_PORT: z.coerce.number().default(5432),
-  DB_USERNAME: z.string(),
-  DB_PASSWORD: z.string(),
-  DB_NAME: z.string(),
+  POSTGRES_URL: z.url(),
 
   // Redis
   REDIS_URL: z.url(),

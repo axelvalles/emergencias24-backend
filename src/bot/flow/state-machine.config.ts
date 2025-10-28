@@ -1,10 +1,8 @@
 import { Patient } from 'src/patients/entities/patient.entity';
-import { TWILIO_TEMPLATES } from './templates';
 import { MessagingService } from 'src/shared/messaging/messaging.service';
 import { SessionStoreService } from '../session-store.service';
 import { PatientsService } from 'src/patients/patients.service';
-
-// const OPERATOR_NUMBER = 'whatsapp:+584227426301';
+import { ServiceType, Priority } from 'src/tickets/entities/ticket.entity';
 
 export type BotStates =
   | 'START'
@@ -31,17 +29,26 @@ type Response = {
   currentState: BotStates;
 };
 
+import { TicketsService } from 'src/tickets/tickets.service';
+import { TWILIO_TEMPLATES } from '../state-machine/templates';
+
 type Services = {
   messaging: MessagingService;
   sessionStore: SessionStoreService;
   patientsService: PatientsService;
+  ticketsService: TicketsService;
 };
 
 type StateMachine = Record<
   BotStates,
   {
     handle(
-      messagingResponse: { from: string; body: string; profileName: string },
+      messagingResponse: {
+        from: string;
+        body: string;
+        profileName: string;
+        location: { latitude: string; longitude: string } | null;
+      },
       context: Context,
       serivices: Services,
     ): Promise<Response>;
@@ -94,7 +101,18 @@ export const stateMachineConfig: StateMachine = {
         case 'atencion-domiciliaria':
           await services.messaging.sendMessage(
             messagingResponse.from,
-            '¿En qué municipio necesitas la atención domiciliaria?',
+            `¿En qué municipio necesitas la atención domiciliaria?
+            1. Mariño
+            2. Maneiro
+            3. García
+            4. Arismendi
+            5. Antolin
+            6. Gomez
+            7. Marcano
+            8. Díaz
+            9. Tubores
+            10. P macanao
+            `,
           );
 
           return {
@@ -164,10 +182,10 @@ export const stateMachineConfig: StateMachine = {
   },
   WAITING_LOCATION: {
     async handle(messagingResponse, _context, services) {
-      const isValidLocation = messagingResponse.body.trim() !== '';
+      const isValidLocationText = messagingResponse.body.trim() !== '';
+      const isValidLocation = messagingResponse.location !== null;
 
-      // TODO: Debe permitir enviar una ubicacion
-      if (!isValidLocation) {
+      if (!isValidLocation && !isValidLocationText) {
         await services.messaging.sendMessage(
           messagingResponse.from,
           'Por favor, escribe una ubicación para poder continuar.',
@@ -180,11 +198,25 @@ export const stateMachineConfig: StateMachine = {
         };
       }
 
-      // TODO: Generar alerta a operador en despacho
+      const location = messagingResponse.location;
+
+      await services.ticketsService.create({
+        serviceType: ServiceType.IMMEDIATE_ATTENTION,
+        priority: Priority.URGENT,
+        requesterPhone: messagingResponse.from,
+        requesterName: messagingResponse.profileName,
+        location: location
+          ? `${location.latitude},${location.longitude}`
+          : undefined,
+        municipality: 'No especificado',
+        description: location
+          ? `Solicitud de atención inmediata en coordenadas (${location.latitude}, ${location.longitude})`
+          : `Solicitud de atención inmediata en la ubicación: ${messagingResponse.body.trim()}`,
+      });
 
       await services.messaging.sendMessage(
         messagingResponse.from,
-        '¡Ubicación recibida! Hemos generado un ticket de servicio y un operador le contectara de inmediato.',
+        `¡Ubicación recibida! Hemos generado un ticket de servicio, un operador le contectara de inmediato.`,
       );
 
       return {
@@ -457,7 +489,19 @@ export const stateMachineConfig: StateMachine = {
   },
   WAITING_LOCATION_TRANSFER: {
     async handle(messagingResponse, context, services) {
-      // TODO: Generar alerta a operador en despacho
+      // Crear ticket de ambulancia
+      const location = messagingResponse.body.trim();
+
+      await services.ticketsService.create({
+        serviceType: ServiceType.AMBULANCE,
+        priority: Priority.URGENT,
+        patientId: context.patient?.id?.toString(),
+        requesterPhone: messagingResponse.from,
+        requesterName: messagingResponse.profileName,
+        location: location,
+        municipality: 'No especificado', // TODO: Obtener del contexto del estado anterior
+        description: `Solicitud de ambulancia desde ${location}`,
+      });
 
       await services.messaging.sendMessage(
         messagingResponse.from,
@@ -467,7 +511,7 @@ export const stateMachineConfig: StateMachine = {
       return {
         nextState: 'START',
         lastInteraction: new Date().toISOString(),
-        currentState: 'WAITING_DOMICILE_CONFIRMATION',
+        currentState: 'WAITING_LOCATION_TRANSFER',
       };
     },
   },

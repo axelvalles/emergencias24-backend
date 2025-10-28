@@ -2,7 +2,7 @@ import { MessagingService } from 'src/shared/messaging/messaging.service';
 import { SessionStoreService } from '../session-store.service';
 import { PatientsService } from 'src/patients/patients.service';
 import { BotStates } from './state-machine.config';
-import { TWILIO_TEMPLATES } from './templates';
+import { TWILIO_TEMPLATES } from '../state-machine/templates';
 
 type Services = {
   messaging: MessagingService;
