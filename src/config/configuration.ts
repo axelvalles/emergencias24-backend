@@ -10,11 +10,6 @@ export const envSchema = z.object({
   TWILIO_AUTH_TOKEN: z.string().min(1),
   TWILIO_PHONE_NUMBER: z.string().regex(/^whatsapp:\+\d+$/, 'Formato inválido'),
 
-  // Meta
-  META_ACCESS_TOKEN: z.string().min(1),
-  META_PHONE_NUMBER_ID: z.string().min(1),
-  WHATSAPP_VERIFY_TOKEN: z.string().min(1),
-
   // DB
   POSTGRES_URL: z.url(),
 
