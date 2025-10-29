@@ -55,8 +55,6 @@ export class TicketsService {
       ...filters
     } = queryDto;
 
-    console.log(queryDto);
-
     const queryBuilder = this.ticketRepository.createQueryBuilder('ticket');
 
     // Aplicar filtros

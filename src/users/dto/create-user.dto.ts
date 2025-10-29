@@ -5,7 +5,6 @@ import {
   IsOptional,
   IsString,
   MinLength,
-  IsArray,
 } from 'class-validator';
 import { UserRole } from '../entities/user.entity';
 
@@ -18,8 +17,7 @@ export class CreateUserDto {
   @MinLength(6)
   password: string;
 
-  @IsArray()
-  @IsEnum(UserRole, { each: true })
+  @IsEnum(UserRole)
   @IsOptional()
-  roles?: UserRole[];
+  role?: UserRole;
 }

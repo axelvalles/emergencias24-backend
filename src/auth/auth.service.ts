@@ -36,7 +36,7 @@ export class AuthService {
     const user = this.userRepository.create({
       email,
       password_hash: password,
-      roles: registerDto.roles || [UserRole.CLINIC_ADMIN],
+      roles: registerDto.role || UserRole.CLINIC_ADMIN,
     });
 
     // Hash password

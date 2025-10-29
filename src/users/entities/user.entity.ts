@@ -50,10 +50,9 @@ export class User {
   @Column({
     type: 'enum',
     enum: UserRole,
-    array: true,
-    default: [UserRole.CLINIC_ADMIN],
+    default: UserRole.CLINIC_ADMIN,
   })
-  roles: UserRole[];
+  roles: UserRole;
 
   @Column({ type: 'boolean', default: true })
   is_active: boolean;

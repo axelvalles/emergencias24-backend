@@ -22,8 +22,6 @@ export class BotController {
           }
         : null;
 
-    console.log(payload);
-
     await this.botService.handleMessage({ body, from, profileName, location });
 
     return { ok: true };

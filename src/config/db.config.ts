@@ -11,7 +11,6 @@ export const typeOrmFactory = (
   configService: ConfigService,
 ): TypeOrmModuleOptions => {
   const dbCfg = configService.get<ConfigType<typeof dbConfig>>('database');
-  console.log(dbCfg?.url);
 
   return {
     type: 'postgres',

@@ -19,7 +19,7 @@ export class PatientsService {
 
   async findAll(): Promise<Patient[]> {
     return this.patientRepository.find({
-      relations: ['user', 'subscriptions', 'clinical_records'],
+      relations: ['subscriptions', 'clinical_records'],
       select: {
         id: true,
         first_name: true,
@@ -39,7 +39,7 @@ export class PatientsService {
   async findOne(id: string): Promise<Patient> {
     const patient = await this.patientRepository.findOne({
       where: { id },
-      relations: ['user', 'subscriptions', 'clinical_records'],
+      relations: ['subscriptions', 'clinical_records'],
       select: {
         id: true,
         first_name: true,
@@ -76,14 +76,12 @@ export class PatientsService {
   async findByPhone(phone: string): Promise<Patient | null> {
     return this.patientRepository.findOne({
       where: { phone },
-      relations: ['user'],
     });
   }
 
   async findByDocument(documentNumber: string): Promise<Patient | null> {
     return this.patientRepository.findOne({
       where: { document_number: documentNumber },
-      relations: ['user'],
     });
   }
 
@@ -122,7 +120,7 @@ export class PatientsService {
   async findActivePatients(): Promise<Patient[]> {
     return this.patientRepository.find({
       where: { patient_status: 'Active' },
-      relations: ['user'],
+
       select: {
         id: true,
         first_name: true,

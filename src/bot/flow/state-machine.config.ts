@@ -58,8 +58,6 @@ type StateMachine = Record<
 export const stateMachineConfig: StateMachine = {
   START: {
     async handle(messagingResponse, _context, services) {
-      console.log(messagingResponse);
-
       await services.messaging.sendTemplate(
         messagingResponse.from,
         TWILIO_TEMPLATES.MAIN_MENU,
@@ -533,11 +531,6 @@ export const stateMachineConfig: StateMachine = {
       }
 
       if (response === 'sí' || response === 'si') {
-        // TODO: Transfer conversation to operator at 04227426301
-        console.log(
-          `Transferir conversación para cita de ${messagingResponse.from}`,
-        );
-
         await services.messaging.sendMessage(
           messagingResponse.from,
           '¡Excelente! Te estoy transfiriendo con nuestro personal de control de citas.',
