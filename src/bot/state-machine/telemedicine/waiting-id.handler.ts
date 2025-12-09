@@ -53,7 +53,7 @@ export class TelemedicineWaitingIdHandler extends BaseHandler {
     // TODO: Generar alerta a operador en despacho
     await services.ticketsService.create({
       serviceType: ServiceType.TELEMEDICINE,
-      priority: Priority.LOW,
+      priority: Priority.HIGH,
       requesterPhone: from,
       requesterName: profileName,
       patientId: patient.id,

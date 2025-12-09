@@ -4,8 +4,10 @@ import {
   Column,
   CreateDateColumn,
   BeforeInsert,
+  OneToMany,
 } from 'typeorm';
 import { uuidv7 } from 'uuidv7';
+import { PlanSubscription } from '../../plans/entities/plan-subscription.entity';
 
 export enum Gender {
   MALE = 'Male',
@@ -128,6 +130,8 @@ export class Patient {
   updated_at: Date;
 
   // --- Relationships ---
+  @OneToMany(() => PlanSubscription, (subscription) => subscription.patient)
+  subscriptions: PlanSubscription[];
 
   // --- Calculated ---
   get fullName() {
