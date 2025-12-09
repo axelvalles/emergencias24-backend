@@ -10,7 +10,7 @@ primary_region = 'iad'
 
 [deploy]
   # Ejecuta las migraciones antes de levantar la nueva versión
-  release_command = "npm run migration:run"
+  release_command = "npm run migration:run:prod"
 
 [env]
   NODE_ENV = 'production'
