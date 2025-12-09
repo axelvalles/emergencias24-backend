@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { Patient } from '../../patients/entities/patient.entity';
 import { uuidv7 } from 'uuidv7';
+import { User } from 'src/users/entities/user.entity';
 
 export enum ServiceType {
   IMMEDIATE_ATTENTION = 'immediate_attention',
@@ -19,6 +20,8 @@ export enum ServiceType {
   AMBULANCE = 'ambulance',
   LABORATORY = 'laboratory',
   APPOINTMENT = 'appointment',
+  EQUIPMENT_RENTAL = 'equipment_rental',
+  PLANS = 'plans',
 }
 
 export enum TicketStatus {
@@ -33,7 +36,6 @@ export enum Priority {
   LOW = 'low',
   MEDIUM = 'medium',
   HIGH = 'high',
-  URGENT = 'urgent',
 }
 
 @Entity('tickets')
@@ -97,8 +99,18 @@ export class Ticket {
   @Column({ type: 'text', nullable: true })
   description: string;
 
+  @Column({ type: 'text', nullable: true })
+  note: string;
+
+  @Column({ type: 'text', nullable: true })
+  cancellationReason: string;
+
   @Column({ nullable: true })
-  assignedTo: string; // ID del operador asignado
+  assignedTo: string;
+
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'assignedTo' })
+  user: User;
 
   @Column({ type: 'timestamp', nullable: true })
   assignedAt: Date;

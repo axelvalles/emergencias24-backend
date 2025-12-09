@@ -29,4 +29,35 @@ export const TWILIO_MESSSAGES = {
 8️⃣ Díaz
 9️⃣ Tubores
 🔟 P. Macanao`,
+
+  MEDICAL_CONSULTATIONS_SPECIALITY: `¿Para qué especialidad médica necesitas una consulta?
+
+1️⃣ Consulta Medicina General
+2️⃣ Consulta medica especializada
+3️⃣ Medicina Interna
+4️⃣ Cardiología
+5️⃣ Neumonología
+6️⃣ Nefrología
+7️⃣ Cirugia General
+8️⃣ Dermatologia
+9️⃣ Pediatría
+🔟 Otras...`,
+
+  EQUIPMENT_RENTAL: `¿Para qué especialidad médica necesitas una consulta?
+
+1️⃣ Kit de bombona de oxígeno
+2️⃣ Concentrador de oxigeno 10lts
+3️⃣ Concentrador de oxigeno 5lts
+4️⃣ Nebulizador
+5️⃣ Sillas de rueda
+6️⃣ Muletas adulto
+7️⃣ Muletas pediatricas
+8️⃣ Colchon antiescaras
+9️⃣ Cama clinica`,
+
+  PLANS: `¿Para qué plan necesitas información?
+
+1️⃣ Familiar
+2️⃣ Empresarial
+3️⃣ Colectivos`,
 };

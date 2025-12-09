@@ -18,9 +18,9 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
-      "src/": ["src/*"]
+      "src/*": ["src/*"]
     }
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "test", "scripts", "dist"]
+  "exclude": ["node_modules", "test", "dist"]
 }

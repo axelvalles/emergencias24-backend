@@ -200,7 +200,7 @@ export const stateMachineConfig: StateMachine = {
 
       await services.ticketsService.create({
         serviceType: ServiceType.IMMEDIATE_ATTENTION,
-        priority: Priority.URGENT,
+        priority: Priority.HIGH,
         requesterPhone: messagingResponse.from,
         requesterName: messagingResponse.profileName,
         location: location
@@ -492,7 +492,7 @@ export const stateMachineConfig: StateMachine = {
 
       await services.ticketsService.create({
         serviceType: ServiceType.AMBULANCE,
-        priority: Priority.URGENT,
+        priority: Priority.HIGH,
         patientId: context.patient?.id?.toString(),
         requesterPhone: messagingResponse.from,
         requesterName: messagingResponse.profileName,

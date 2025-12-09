@@ -5,7 +5,6 @@ import {
   Body,
   Patch,
   Param,
-  Delete,
   Query,
   ParseUUIDPipe,
   ParseIntPipe,
@@ -13,8 +12,9 @@ import {
 } from '@nestjs/common';
 import { TicketsService } from './tickets.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
-import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { QueryTicketsDto } from './dto/query-tickets.dto';
+import { CancelTicketDto } from './dto/cancell-ticket.dto';
+import { UpdateNoteTicketDto } from './dto/update-note-ticket.dto';
 
 @Controller('tickets')
 export class TicketsController {
@@ -50,19 +50,6 @@ export class TicketsController {
     return this.ticketsService.findByReferenceNumber(referenceNumber);
   }
 
-  @Patch(':id')
-  update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() updateTicketDto: UpdateTicketDto,
-  ) {
-    return this.ticketsService.update(id, updateTicketDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.ticketsService.remove(id);
-  }
-
   @Patch(':id/assign/:assignedTo')
   assignTicket(
     @Param('id', ParseUUIDPipe) id: string,
@@ -76,8 +63,19 @@ export class TicketsController {
     return this.ticketsService.completeTicket(id);
   }
 
+  @Patch(':id/update-note')
+  updateNote(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() { note }: UpdateNoteTicketDto,
+  ) {
+    return this.ticketsService.updateNote(id, note);
+  }
+
   @Patch(':id/cancel')
-  cancelTicket(@Param('id', ParseUUIDPipe) id: string) {
-    return this.ticketsService.cancelTicket(id);
+  cancelTicket(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() { cancellationReason }: CancelTicketDto,
+  ) {
+    return this.ticketsService.cancelTicket(id, cancellationReason);
   }
 }

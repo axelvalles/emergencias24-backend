@@ -8,6 +8,10 @@ primary_region = 'iad'
 
 [build]
 
+[deploy]
+  # Ejecuta las migraciones antes de levantar la nueva versión
+  release_command = "npm run migration:run"
+
 [env]
   NODE_ENV = 'production'
   PORT = '8080'

@@ -1,14 +1,42 @@
-import { ClinicalRecord } from 'src/clinical-records/entities/clinical-record.entity';
-import { Subscription } from 'src/subscriptions/entities/subscription.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
-  OneToMany,
   BeforeInsert,
 } from 'typeorm';
 import { uuidv7 } from 'uuidv7';
+
+export enum Gender {
+  MALE = 'Male',
+  FEMALE = 'Female',
+  OTHER = 'Other',
+}
+
+export enum BloodType {
+  A_POSITIVE = 'A+',
+  A_NEGATIVE = 'A-',
+  B_POSITIVE = 'B+',
+  B_NEGATIVE = 'B-',
+  AB_POSITIVE = 'AB+',
+  AB_NEGATIVE = 'AB-',
+  O_POSITIVE = 'O+',
+  O_NEGATIVE = 'O-',
+}
+
+export enum PatientStatus {
+  ACTIVE = 'Active',
+  INACTIVE = 'Inactive',
+  DECEASED = 'Deceased',
+}
+
+export enum DocumentType {
+  CC = 'CC',
+  CE = 'CE',
+  PASSPORT = 'PASSPORT',
+  NIT = 'NIT',
+  OTHER = 'OTHER',
+}
 
 @Entity('patients')
 export class Patient {
@@ -31,11 +59,17 @@ export class Patient {
   @Column({ type: 'date', nullable: true })
   birth_date: Date;
 
-  @Column({ type: 'varchar', length: 50 })
-  gender: string;
+  @Column({
+    type: 'enum',
+    enum: Gender,
+  })
+  gender: Gender;
 
-  @Column({ type: 'varchar', length: 50 })
-  document_type: string;
+  @Column({
+    type: 'enum',
+    enum: DocumentType,
+  })
+  document_type: DocumentType;
 
   @Column({ type: 'varchar', length: 50, unique: true })
   document_number: string;
@@ -64,8 +98,12 @@ export class Patient {
   @Column({ type: 'varchar', length: 20, nullable: true })
   emergency_contact_phone: string;
 
-  @Column({ type: 'varchar', length: 50, nullable: true })
-  blood_type: string;
+  @Column({
+    type: 'enum',
+    enum: BloodType,
+    nullable: true,
+  })
+  blood_type: BloodType;
 
   @Column({ type: 'text', nullable: true })
   allergies: string;
@@ -73,8 +111,12 @@ export class Patient {
   @Column({ type: 'text', nullable: true })
   medical_conditions: string;
 
-  @Column({ type: 'varchar', length: 50, default: 'Active' })
-  patient_status: string;
+  @Column({
+    type: 'enum',
+    enum: PatientStatus,
+    default: PatientStatus.ACTIVE,
+  })
+  patient_status: PatientStatus;
 
   @Column({ type: 'varchar', length: 50, nullable: true })
   medical_record_number: string;
@@ -86,16 +128,6 @@ export class Patient {
   updated_at: Date;
 
   // --- Relationships ---
-
-  // A patient can have many subscriptions.
-  @OneToMany(() => Subscription, (subscription) => subscription.patient, {
-    cascade: true,
-  })
-  subscriptions: Subscription[];
-
-  // A patient can have many clinical records.
-  @OneToMany(() => ClinicalRecord, (record) => record.patient)
-  clinical_records: ClinicalRecord[];
 
   // --- Calculated ---
   get fullName() {

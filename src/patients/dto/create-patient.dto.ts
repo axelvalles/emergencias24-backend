@@ -3,7 +3,9 @@ import {
   IsDateString,
   IsOptional,
   IsNotEmpty,
+  IsEnum,
 } from 'class-validator';
+import { Gender, DocumentType } from '../entities/patient.entity';
 
 export class CreatePatientDto {
   @IsNotEmpty()
@@ -18,11 +20,11 @@ export class CreatePatientDto {
   @IsDateString()
   birth_date: Date;
 
-  @IsString()
-  gender: string;
+  @IsEnum(Gender)
+  gender: Gender;
 
-  @IsString()
-  document_type: string;
+  @IsEnum(DocumentType)
+  document_type: DocumentType;
 
   @IsString()
   document_number: string;

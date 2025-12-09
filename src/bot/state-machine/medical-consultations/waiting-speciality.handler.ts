@@ -6,22 +6,22 @@ import {
   Services,
   BotStates,
 } from '../types';
+import { Priority, ServiceType } from 'src/tickets/entities/ticket.entity';
 
 export class MedicalConsultationsWaitingSpecialityHandler extends BaseHandler {
   state: BotStates = 'MEDICAL_CONSULTATIONS_WAITING_SPECIALTY';
 
-  private readonly specialitiesCost = {
-    general: 10000,
-    odontology: 15000,
-    optometry: 20000,
-    specialized: 25000,
-  };
-
   private readonly specialitiesLabels = {
-    general: 'Médicina General',
-    odontology: 'Odontología',
-    optometry: 'Optometría',
-    specialized: 'Medicina Especializada',
+    '1': 'Consulta Medicina General',
+    '2': 'Consulta medica especializada',
+    '3': 'Medicina Interna',
+    '4': 'Cardiología',
+    '5': 'Neumonología',
+    '6': 'Nefrología',
+    '7': 'Cirugia General',
+    '8': 'Dermatologia',
+    '9': 'Pediatría',
+    '10': 'Otras...',
   };
 
   async handle(
@@ -31,53 +31,52 @@ export class MedicalConsultationsWaitingSpecialityHandler extends BaseHandler {
   ): Promise<Response> {
     const selectedItemId = messagingResponse.body;
 
-    if (
-      selectedItemId === 'general' ||
-      selectedItemId === 'odontology' ||
-      selectedItemId === 'optometry'
-    ) {
-      await services.sessionStore.setSpeciality(
-        messagingResponse.from,
-        selectedItemId,
-      );
+    const validOptions = Object.keys(this.specialitiesLabels); // ['1','2','3',...,'10']
 
+    if (!validOptions.includes(selectedItemId)) {
       await services.messaging.sendMessage(
         messagingResponse.from,
-        `Las consultas de ${this.specialitiesLabels[selectedItemId]} tienen un costo de ${this.specialitiesCost[selectedItemId]}. ¿Deseas agendar una cita? (Sí/No)`,
+        'Opción no válida. Por favor, elige una opción del menú.',
       );
 
       return {
-        nextState: 'MEDICAL_CONSULTATIONS_CONFIRMATION',
+        nextState: this.state,
         lastInteraction: new Date().toISOString(),
         currentState: this.state,
       };
     }
 
-    if (selectedItemId === 'specialized') {
-      await services.sessionStore.setSpeciality(
-        messagingResponse.from,
-        selectedItemId,
-      );
-
+    if (selectedItemId === '10') {
       await services.messaging.sendMessage(
         messagingResponse.from,
-        `Las consultas de ${this.specialitiesLabels[selectedItemId]} tienen un costo de ${this.specialitiesCost[selectedItemId]}. ¿Deseas agendar una cita? (Sí/No)`,
+        `Escriba la especialidad que necesite'`,
       );
 
       return {
-        nextState: 'MEDICAL_CONSULTATIONS_CONFIRMATION',
+        nextState: 'START',
         lastInteraction: new Date().toISOString(),
         currentState: this.state,
       };
     }
+
+    await services.ticketsService.create({
+      serviceType: ServiceType.MEDICAL_CONSULTATION,
+      priority: Priority.HIGH,
+      requesterPhone: messagingResponse.from,
+      requesterName: messagingResponse.profileName,
+      speciality: selectedItemId,
+      description:
+        'Solicitud de consulta médica para la especialidad de ' +
+        this.specialitiesLabels[selectedItemId],
+    });
 
     await services.messaging.sendMessage(
       messagingResponse.from,
-      'Opción no válida. Por favor, elige una opción del menú.',
+      `¡Excelente! Estoy transfiriendo tu solicitud con nuestro personal de control de citas.'`,
     );
 
     return {
-      nextState: this.state,
+      nextState: 'START',
       lastInteraction: new Date().toISOString(),
       currentState: this.state,
     };

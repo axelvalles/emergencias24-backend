@@ -19,7 +19,7 @@ export class AmbulanceWaitingLocationHandler extends BaseHandler {
     const { from, body, profileName, location } = messagingResponse;
 
     await services.ticketsService.create({
-      serviceType: ServiceType.HOME_CARE,
+      serviceType: ServiceType.AMBULANCE,
       priority: Priority.MEDIUM,
       requesterPhone: from,
       requesterName: profileName,

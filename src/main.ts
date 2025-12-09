@@ -4,7 +4,7 @@ import * as bodyParser from 'body-parser';
 import * as qs from 'qs';
 import { ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
-// import { Logger } from 'nestjs-pino';
+import { Logger } from 'nestjs-pino';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -20,13 +20,17 @@ async function bootstrap() {
   app.use(bodyParser.urlencoded({ extended: false }));
   app.use(bodyParser.json());
 
-  // app.useLogger(app.get(Logger));
+  app.useLogger(app.get(Logger));
 
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
-  app.enableCors();
+  app.enableCors({
+    origin: '*',
+  });
 
   const port = parseInt(process.env.PORT || '', 10) || 8080;
+  console.log(port);
+
   await app.listen(port, '0.0.0.0');
 }
 

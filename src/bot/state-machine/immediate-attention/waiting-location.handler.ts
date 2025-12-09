@@ -30,7 +30,7 @@ export class ImmediateAttentionWaitingLocationHandler extends BaseHandler {
 
     await services.ticketsService.create({
       serviceType: ServiceType.IMMEDIATE_ATTENTION,
-      priority: Priority.URGENT,
+      priority: Priority.HIGH,
       requesterPhone: from,
       requesterName: profileName,
       location: location

@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import { Ticket, TicketStatus } from './entities/ticket.entity';
 import { CreateTicketDto } from './dto/create-ticket.dto';
-import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { QueryTicketsDto } from './dto/query-tickets.dto';
 import { TicketsGateway } from './tickets.gateway';
 
@@ -94,61 +93,51 @@ export class TicketsService {
     return ticket;
   }
 
-  async update(id: string, updateTicketDto: UpdateTicketDto): Promise<Ticket> {
-    const ticket = await this.findOne(id);
-
-    // Actualizar campos de asignación si se está asignando
-    if (updateTicketDto.assignedTo && !ticket.assignedTo) {
-      updateTicketDto.assignedAt = new Date();
-    }
-
-    // Actualizar campos de completado si se está completando
-    if (
-      updateTicketDto.status === TicketStatus.COMPLETED &&
-      ticket.status !== TicketStatus.COMPLETED
-    ) {
-      updateTicketDto.completedAt = new Date();
-    }
-
-    Object.assign(ticket, updateTicketDto);
-    const updatedTicket = await this.ticketRepository.save(ticket);
-
-    // Emitir eventos WebSocket según el cambio
-    if (updateTicketDto.assignedTo && !ticket.assignedTo) {
-      this.ticketsGateway.emitTicketAssigned(updatedTicket);
-    } else if (updateTicketDto.status === TicketStatus.COMPLETED) {
-      this.ticketsGateway.emitTicketCompleted(updatedTicket);
-    } else if (updateTicketDto.status === TicketStatus.CANCELLED) {
-      this.ticketsGateway.emitTicketCancelled(updatedTicket);
-    } else {
-      this.ticketsGateway.emitTicketUpdated(updatedTicket);
-    }
-
-    return updatedTicket;
-  }
-
   async remove(id: string): Promise<void> {
     const ticket = await this.findOne(id);
     await this.ticketRepository.remove(ticket);
   }
 
   async assignTicket(id: string, assignedTo: string): Promise<Ticket> {
-    return this.update(id, {
-      assignedTo,
-      status: TicketStatus.ASSIGNED,
-    });
+    const ticket = await this.findOne(id);
+
+    ticket.assignedTo = assignedTo;
+    ticket.status = TicketStatus.ASSIGNED;
+
+    await this.ticketRepository.save(ticket);
+
+    return ticket;
   }
 
   async completeTicket(id: string): Promise<Ticket> {
-    return this.update(id, {
-      status: TicketStatus.COMPLETED,
-    });
+    const ticket = await this.findOne(id);
+
+    ticket.status = TicketStatus.COMPLETED;
+
+    await this.ticketRepository.save(ticket);
+
+    return ticket;
   }
 
-  async cancelTicket(id: string): Promise<Ticket> {
-    return this.update(id, {
-      status: TicketStatus.CANCELLED,
-    });
+  async updateNote(id: string, note: string): Promise<Ticket> {
+    const ticket = await this.findOne(id);
+
+    ticket.note = note;
+
+    await this.ticketRepository.save(ticket);
+
+    return ticket;
+  }
+
+  async cancelTicket(id: string, cancellationReason: string): Promise<Ticket> {
+    const ticket = await this.findOne(id);
+
+    ticket.cancellationReason = cancellationReason;
+    ticket.status = TicketStatus.CANCELLED;
+
+    await this.ticketRepository.save(ticket);
+
+    return ticket;
   }
 
   private applyFilters(

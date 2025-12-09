@@ -7,42 +7,34 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { BotModule } from './bot/bot.module';
 import { redisConfig, redisFactory } from './config/redis.config';
 import { PatientsModule } from './patients/patients.module';
-import { PlansModule } from './plans/plans.module';
-import { SubscriptionsModule } from './subscriptions/subscriptions.module';
-import { ClinicalRecordsModule } from './clinical-records/clinical-records.module';
-import { DoctorsModule } from './doctors/doctors.module';
-import { SpecialtiesModule } from './specialties/specialties.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { MessagingModule } from './shared/messaging/messaging.module';
 import { TicketsModule } from './tickets/tickets.module';
-import twilioConfig from './config/twilio.config';
+import { twilioConfig } from './config/twilio.config';
 import { dbConfig, typeOrmFactory } from './config/db.config';
 import { envSchema } from './config/configuration';
-// import { LoggerModule } from 'nestjs-pino';
+import { LoggerModule } from 'nestjs-pino';
+
+const isDevelopment = process.env.NODE_ENV !== 'production';
+
+const pinoConfig = {
+  pinoHttp: {
+    transport: isDevelopment
+      ? {
+          target: 'pino-pretty',
+          options: {
+            singleLine: true,
+            colorize: true,
+          },
+        }
+      : undefined,
+  },
+};
 
 @Module({
   imports: [
-    // LoggerModule.forRoot({
-    //   pinoHttp: {
-    //     level: process.env.NODE_ENV !== 'production' ? 'debug' : 'info',
-
-    //     transport:
-    //       process.env.NODE_ENV !== 'production'
-    //         ? {
-    //             target: 'pino-pretty',
-    //             options: {
-    //               colorize: true, // Colores en terminal
-    //               singleLine: false, // Multilínea legible
-    //               translateTime: 'SYS:HH:MM:ss', // Hora local legible
-    //               ignore: 'pid,hostname,context', // Oculta campos poco útiles
-    //               messageFormat:
-    //                 '{req.method} {req.url} -> {res.statusCode} | {responseTime}ms',
-    //             },
-    //           }
-    //         : undefined, // En producción usa el formato JSON nativo (más rápido)
-    //   },
-    // }),
+    LoggerModule.forRoot(pinoConfig),
     ConfigModule.forRoot({
       isGlobal: true,
       load: [twilioConfig, dbConfig, redisConfig],
@@ -72,11 +64,6 @@ import { envSchema } from './config/configuration';
     TicketsModule,
     BotModule,
     PatientsModule,
-    PlansModule,
-    SubscriptionsModule,
-    ClinicalRecordsModule,
-    DoctorsModule,
-    SpecialtiesModule,
     UsersModule,
     AuthModule,
   ],

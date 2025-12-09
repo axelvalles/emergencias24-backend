@@ -2,7 +2,7 @@ import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService, ConfigType } from '@nestjs/config';
 import * as twilio from 'twilio';
 import { IMessagingProvider } from '../interfaces/messaging.interface';
-import twilioConfig from 'src/config/twilio.config';
+import { twilioConfig } from 'src/config/twilio.config';
 
 @Injectable()
 export class TwilioMessagingProvider implements IMessagingProvider {

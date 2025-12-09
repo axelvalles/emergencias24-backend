@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreatePatientDto } from './dto/create-patient.dto';
 import { UpdatePatientDto } from './dto/update-patient.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Patient } from './entities/patient.entity';
+import { Patient, PatientStatus } from './entities/patient.entity';
 import { Repository } from 'typeorm';
 
 @Injectable()
@@ -105,21 +105,21 @@ export class PatientsService {
 
   async activatePatient(id: string): Promise<Patient> {
     const patient = await this.findOne(id);
-    patient.patient_status = 'Active';
+    patient.patient_status = PatientStatus.ACTIVE;
     patient.updated_at = new Date();
     return this.patientRepository.save(patient);
   }
 
   async deactivatePatient(id: string): Promise<Patient> {
     const patient = await this.findOne(id);
-    patient.patient_status = 'Inactive';
+    patient.patient_status = PatientStatus.INACTIVE;
     patient.updated_at = new Date();
     return this.patientRepository.save(patient);
   }
 
   async findActivePatients(): Promise<Patient[]> {
     return this.patientRepository.find({
-      where: { patient_status: 'Active' },
+      where: { patient_status: PatientStatus.ACTIVE },
 
       select: {
         id: true,

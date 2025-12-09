@@ -1,4 +1,4 @@
-import { TWILIO_MESSSAGES, TWILIO_TEMPLATES } from '../templates';
+import { TWILIO_MESSSAGES } from '../templates';
 import { BaseHandler } from '../base.handler';
 import {
   Response,
@@ -56,7 +56,7 @@ export class WaitingMenuOptionHandler extends BaseHandler {
       case 'consultas-medicas':
         await services.messaging.sendTemplate(
           messagingResponse.from,
-          TWILIO_TEMPLATES.MEDICAL_CONSULTATIONS_SPECIALITY,
+          TWILIO_MESSSAGES.MEDICAL_CONSULTATIONS_SPECIALITY,
         );
 
         return {
@@ -97,6 +97,30 @@ export class WaitingMenuOptionHandler extends BaseHandler {
 
         return {
           nextState: 'START',
+          lastInteraction: new Date().toISOString(),
+          currentState: this.state,
+        };
+
+      case 'alquiler-de-equipos':
+        await services.messaging.sendMessage(
+          messagingResponse.from,
+          TWILIO_MESSSAGES.EQUIPMENT_RENTAL,
+        );
+
+        return {
+          nextState: 'EQUIPMENT_RENTAL_WAITING_OPTION',
+          lastInteraction: new Date().toISOString(),
+          currentState: this.state,
+        };
+
+      case 'planes':
+        await services.messaging.sendMessage(
+          messagingResponse.from,
+          TWILIO_MESSSAGES.PLANS,
+        );
+
+        return {
+          nextState: 'Plan_WAITING_OPTION',
           lastInteraction: new Date().toISOString(),
           currentState: this.state,
         };
