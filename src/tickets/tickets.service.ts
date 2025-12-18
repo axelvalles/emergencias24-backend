@@ -5,6 +5,7 @@ import { Ticket, TicketStatus } from './entities/ticket.entity';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { QueryTicketsDto } from './dto/query-tickets.dto';
 import { TicketsGateway } from './tickets.gateway';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class TicketsService {
@@ -12,6 +13,7 @@ export class TicketsService {
     @InjectRepository(Ticket)
     private readonly ticketRepository: Repository<Ticket>,
     private readonly ticketsGateway: TicketsGateway,
+    private readonly usersService: UsersService,
   ) {}
 
   async create(createTicketDto: CreateTicketDto): Promise<Ticket> {
@@ -100,8 +102,14 @@ export class TicketsService {
 
   async assignTicket(id: string, assignedTo: string): Promise<Ticket> {
     const ticket = await this.findOne(id);
+    const user = await this.usersService.findOne(assignedTo);
 
-    ticket.assignedTo = assignedTo;
+    if (!user) {
+      throw new NotFoundException(`User with ID ${assignedTo} not found`);
+    }
+
+    ticket.assignedUser = user;
+    ticket.assignedAt = new Date();
     ticket.status = TicketStatus.ASSIGNED;
 
     await this.ticketRepository.save(ticket);
@@ -113,6 +121,7 @@ export class TicketsService {
     const ticket = await this.findOne(id);
 
     ticket.status = TicketStatus.COMPLETED;
+    ticket.completedAt = new Date();
 
     await this.ticketRepository.save(ticket);
 
@@ -175,7 +184,7 @@ export class TicketsService {
     }
 
     if (filters.assignedTo) {
-      queryBuilder.andWhere('ticket.assignedTo = :assignedTo', {
+      queryBuilder.andWhere('ticket.assignedUser = :assignedTo', {
         assignedTo: filters.assignedTo,
       });
     }

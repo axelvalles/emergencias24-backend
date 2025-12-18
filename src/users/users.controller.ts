@@ -7,6 +7,8 @@ import {
   Param,
   Delete,
   UseGuards,
+  Query,
+  ValidationPipe,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -15,6 +17,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from './entities/user.entity';
+import { QueryUserDto } from './dto/query-user.dto';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -28,27 +31,21 @@ export class UsersController {
   }
 
   @Get()
-  @Roles(
-    UserRole.CLINIC_ADMIN,
-    UserRole.SUPER_ADMIN,
-    UserRole.DOCTOR,
-    UserRole.NURSE,
-    UserRole.RECEPTIONIST,
-    UserRole.OPERATOR,
-  )
-  findAll() {
-    return this.usersService.findAll();
+  @Roles(UserRole.CLINIC_ADMIN, UserRole.SUPER_ADMIN)
+  findAll(
+    @Query(
+      new ValidationPipe({
+        transform: true,
+        transformOptions: { enableImplicitConversion: true },
+      }),
+    )
+    query: QueryUserDto,
+  ) {
+    return this.usersService.findAll(query);
   }
 
   @Get(':id')
-  @Roles(
-    UserRole.CLINIC_ADMIN,
-    UserRole.SUPER_ADMIN,
-    UserRole.DOCTOR,
-    UserRole.NURSE,
-    UserRole.RECEPTIONIST,
-    UserRole.OPERATOR,
-  )
+  @Roles(UserRole.CLINIC_ADMIN, UserRole.SUPER_ADMIN)
   findOne(@Param('id') id: string) {
     return this.usersService.findOne(id);
   }

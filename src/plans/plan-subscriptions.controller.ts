@@ -6,12 +6,12 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { PlanSubscriptionsService } from './services/plan-subscriptions.service';
-import {
-  PlanSubscription,
-  PlanSubscriptionRole,
-} from './entities/plan-subscription.entity';
+import { CreatePlanSubscriptionDto } from './dto/create-plan-subscription.dto';
+import { UpdatePlanSubscriptionDto } from './dto/update-plan-subscription.dto';
+import { QueryPlanSubscriptionsDto } from './dto/query-plan-subscriptions.dto';
 
 @Controller('plan-subscriptions')
 export class PlanSubscriptionsController {
@@ -20,23 +20,13 @@ export class PlanSubscriptionsController {
   ) {}
 
   @Post()
-  create(@Body() createPlanSubscriptionDto: Partial<PlanSubscription>) {
+  create(@Body() createPlanSubscriptionDto: CreatePlanSubscriptionDto) {
     return this.planSubscriptionsService.create(createPlanSubscriptionDto);
   }
 
   @Get()
-  findAll() {
-    return this.planSubscriptionsService.findAll();
-  }
-
-  @Get('patient/:patientId')
-  findByPatient(@Param('patientId') patientId: string) {
-    return this.planSubscriptionsService.findByPatient(patientId);
-  }
-
-  @Get('group/:groupId')
-  findByPlanGroup(@Param('groupId') groupId: string) {
-    return this.planSubscriptionsService.findByPlanGroup(groupId);
+  findAll(@Query() query: QueryPlanSubscriptionsDto) {
+    return this.planSubscriptionsService.findAll(query);
   }
 
   @Get(':id')
@@ -47,37 +37,9 @@ export class PlanSubscriptionsController {
   @Patch(':id')
   update(
     @Param('id') id: string,
-    @Body() updatePlanSubscriptionDto: Partial<PlanSubscription>,
+    @Body() updatePlanSubscriptionDto: UpdatePlanSubscriptionDto,
   ) {
     return this.planSubscriptionsService.update(id, updatePlanSubscriptionDto);
-  }
-
-  @Post('subscribe')
-  subscribe(
-    @Body()
-    body: {
-      planGroupId: string;
-      patientId: string;
-      role?: PlanSubscriptionRole;
-      startDate?: Date;
-      endDate?: Date;
-    },
-  ) {
-    return this.planSubscriptionsService.subscribePatient(
-      body.planGroupId,
-      body.patientId,
-      body.role,
-      body.startDate,
-      body.endDate,
-    );
-  }
-
-  @Delete('unsubscribe/:groupId/:patientId')
-  unsubscribe(
-    @Param('groupId') groupId: string,
-    @Param('patientId') patientId: string,
-  ) {
-    return this.planSubscriptionsService.unsubscribePatient(groupId, patientId);
   }
 
   @Delete(':id')

@@ -1,46 +1,78 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import {
-  PlanSubscription,
-  PlanSubscriptionRole,
-} from '../entities/plan-subscription.entity';
-import { PlanGroup, PlanGroupType } from '../entities/plan-group.entity';
-import { PlanType } from '../entities/plan.entity';
+import { Repository, SelectQueryBuilder } from 'typeorm';
+import { PlanSubscription } from '../entities/plan-subscription.entity';
+import { CreatePlanSubscriptionDto } from '../dto/create-plan-subscription.dto';
+import { UpdatePlanSubscriptionDto } from '../dto/update-plan-subscription.dto';
+import { QueryPlanSubscriptionsDto } from '../dto/query-plan-subscriptions.dto';
 
 @Injectable()
 export class PlanSubscriptionsService {
   constructor(
     @InjectRepository(PlanSubscription)
     private readonly planSubscriptionRepository: Repository<PlanSubscription>,
-    @InjectRepository(PlanGroup)
-    private readonly planGroupRepository: Repository<PlanGroup>,
   ) {}
 
   async create(
-    createPlanSubscriptionDto: Partial<PlanSubscription>,
+    createPlanSubscriptionDto: CreatePlanSubscriptionDto,
   ): Promise<PlanSubscription> {
-    const subscription = this.planSubscriptionRepository.create(
-      createPlanSubscriptionDto,
-    );
+    const subscription = this.planSubscriptionRepository.create({
+      ...createPlanSubscriptionDto,
+      patient: { id: createPlanSubscriptionDto.patientId },
+      plan: { id: createPlanSubscriptionDto.planId },
+      company: createPlanSubscriptionDto.companyId
+        ? { id: createPlanSubscriptionDto.companyId }
+        : null,
+    });
     return this.planSubscriptionRepository.save(subscription);
   }
 
-  async findAll(): Promise<PlanSubscription[]> {
-    return this.planSubscriptionRepository.find({
-      relations: ['patient', 'plan_group', 'plan_group.plan'],
-      order: { created_at: 'DESC' },
-    });
+  async findAll(queryDto: QueryPlanSubscriptionsDto = {}): Promise<{
+    data: PlanSubscription[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = 'createdAt',
+      sortOrder = 'DESC',
+      ...rawFilters
+    } = queryDto;
+
+    const currentPage = Math.max(1, page);
+    const sanitizedLimit = Math.min(Math.max(1, limit), 100);
+    const filters = rawFilters as PlanSubscriptionFilters;
+
+    const queryBuilder = this.planSubscriptionRepository
+      .createQueryBuilder('planSubscription')
+      .leftJoinAndSelect('planSubscription.patient', 'patient')
+      .leftJoinAndSelect('planSubscription.plan', 'plan')
+      .leftJoinAndSelect('planSubscription.company', 'company');
+
+    this.applyFilters(queryBuilder, filters);
+    this.applySorting(queryBuilder, sortBy, sortOrder);
+
+    const skip = (currentPage - 1) * sanitizedLimit;
+    queryBuilder.skip(skip).take(sanitizedLimit);
+
+    const [data, total] = await queryBuilder.getManyAndCount();
+
+    return {
+      data,
+      total,
+      page: currentPage,
+      limit: sanitizedLimit,
+      totalPages: Math.ceil(total / sanitizedLimit),
+    };
   }
 
   async findOne(id: string): Promise<PlanSubscription> {
     const subscription = await this.planSubscriptionRepository.findOne({
       where: { id },
-      relations: ['patient', 'plan_group', 'plan_group.plan'],
+      relations: ['patient', 'plan', 'company'],
     });
 
     if (!subscription) {
@@ -50,155 +82,91 @@ export class PlanSubscriptionsService {
     return subscription;
   }
 
-  async findByPatient(patientId: string): Promise<PlanSubscription[]> {
-    return this.planSubscriptionRepository.find({
-      where: { patient_id: patientId },
-      relations: ['plan_group', 'plan_group.plan'],
-      order: { created_at: 'DESC' },
-    });
-  }
-
-  async findByPlanGroup(planGroupId: string): Promise<PlanSubscription[]> {
-    return this.planSubscriptionRepository.find({
-      where: { plan_group_id: planGroupId },
-      relations: ['patient'],
-      order: { created_at: 'DESC' },
-    });
-  }
-
   async update(
     id: string,
-    updatePlanSubscriptionDto: Partial<PlanSubscription>,
+    updatePlanSubscriptionDto: UpdatePlanSubscriptionDto,
   ): Promise<PlanSubscription> {
     const subscription = await this.findOne(id);
 
     Object.assign(subscription, updatePlanSubscriptionDto);
-    subscription.updated_at = new Date();
+    if (updatePlanSubscriptionDto.patientId) {
+      subscription.patient = { id: updatePlanSubscriptionDto.patientId } as any;
+    }
+    if (updatePlanSubscriptionDto.planId) {
+      subscription.plan = { id: updatePlanSubscriptionDto.planId } as any;
+    }
+    if (updatePlanSubscriptionDto.companyId !== undefined) {
+      subscription.company = updatePlanSubscriptionDto.companyId
+        ? ({ id: updatePlanSubscriptionDto.companyId } as any)
+        : null;
+    }
+    subscription.updatedAt = new Date();
 
     return this.planSubscriptionRepository.save(subscription);
   }
 
   async remove(id: string): Promise<void> {
     const subscription = await this.findOne(id);
+
     await this.planSubscriptionRepository.remove(subscription);
   }
 
-  async subscribePatient(
-    planGroupId: string,
-    patientId: string,
-    role: PlanSubscriptionRole = PlanSubscriptionRole.MEMBER,
-    startDate: Date = new Date(),
-    endDate?: Date,
-  ): Promise<PlanSubscription> {
-    const planGroup = await this.planGroupRepository.findOne({
-      where: { id: planGroupId },
-      relations: ['plan'],
-    });
-
-    if (!planGroup) {
-      throw new NotFoundException(`PlanGroup with ID ${planGroupId} not found`);
-    }
-
-    // Check if patient is already subscribed to this plan group
-    const existingSubscription = await this.planSubscriptionRepository.findOne({
-      where: { plan_group_id: planGroupId, patient_id: patientId },
-    });
-
-    if (existingSubscription) {
-      throw new BadRequestException(
-        `Patient is already subscribed to this plan group`,
-      );
-    }
-
-    // Validate role based on group type
-    if (planGroup.group_type === PlanGroupType.FAMILY) {
-      if (role === PlanSubscriptionRole.MEMBER) {
-        role = PlanSubscriptionRole.BENEFICIARY;
-      }
-      // For family groups, check if there's already a holder
-      if (role === PlanSubscriptionRole.HOLDER) {
-        const existingHolder = await this.planSubscriptionRepository.findOne({
-          where: {
-            plan_group_id: planGroupId,
-            role: PlanSubscriptionRole.HOLDER,
-          },
-        });
-
-        if (existingHolder) {
-          throw new BadRequestException(
-            `Family plan group already has a holder`,
-          );
-        }
-      }
-    } else if (planGroup.group_type === PlanGroupType.CORPORATE) {
-      if (role !== PlanSubscriptionRole.MEMBER) {
-        throw new BadRequestException(
-          `Corporate plan groups can only have MEMBER role`,
-        );
-      }
-    }
-
-    // Check minimum/maximum members validation
-    if (
-      planGroup.plan.plan_type === PlanType.FAMILY ||
-      planGroup.group_type === PlanGroupType.FAMILY
-    ) {
-      const subscriptionCount = await this.planSubscriptionRepository.count({
-        where: { plan_group_id: planGroupId },
+  private applyFilters(
+    queryBuilder: SelectQueryBuilder<PlanSubscription>,
+    filters: PlanSubscriptionFilters,
+  ) {
+    if (filters.patientId) {
+      queryBuilder.andWhere('patient.id = :patientId', {
+        patientId: filters.patientId,
       });
-
-      const maxMembers = planGroup.plan.min_members || 3;
-      if (subscriptionCount >= maxMembers) {
-        throw new BadRequestException(
-          `Plan group cannot have more than ${maxMembers} members`,
-        );
-      }
     }
 
-    const subscription = this.planSubscriptionRepository.create({
-      plan_group_id: planGroupId,
-      patient_id: patientId,
-      role,
-      start_date: startDate,
-      end_date: endDate,
-    });
+    if (filters.planId) {
+      queryBuilder.andWhere('plan.id = :planId', {
+        planId: filters.planId,
+      });
+    }
 
-    return this.planSubscriptionRepository.save(subscription);
+    if (filters.companyId) {
+      queryBuilder.andWhere('company.id = :companyId', {
+        companyId: filters.companyId,
+      });
+    }
+
+    if (filters.status && filters.status.length > 0) {
+      queryBuilder.andWhere('planSubscription.status IN (:...status)', {
+        status: filters.status,
+      });
+    }
+
+    if (filters.payerType && filters.payerType.length > 0) {
+      queryBuilder.andWhere('planSubscription.payerType IN (:...payerType)', {
+        payerType: filters.payerType,
+      });
+    }
   }
 
-  async unsubscribePatient(
-    planGroupId: string,
-    patientId: string,
-  ): Promise<void> {
-    const subscription = await this.planSubscriptionRepository.findOne({
-      where: { plan_group_id: planGroupId, patient_id: patientId },
-    });
+  private applySorting(
+    queryBuilder: SelectQueryBuilder<PlanSubscription>,
+    sortBy: string,
+    sortOrder: 'ASC' | 'DESC',
+  ) {
+    const direction = sortOrder === 'ASC' ? 'ASC' : 'DESC';
+    const allowedFields = [
+      'status',
+      'payerType',
+      'startDate',
+      'endDate',
+      'createdAt',
+      'updatedAt',
+    ];
 
-    if (!subscription) {
-      throw new NotFoundException(
-        `Patient is not subscribed to this plan group`,
-      );
-    }
-
-    // Cannot remove holder if there are other members in family group
-    if (subscription.role === PlanSubscriptionRole.HOLDER) {
-      const planGroup = await this.planGroupRepository.findOne({
-        where: { id: planGroupId },
-      });
-
-      if (planGroup && planGroup.group_type === PlanGroupType.FAMILY) {
-        const subscriptionCount = await this.planSubscriptionRepository.count({
-          where: { plan_group_id: planGroupId },
-        });
-
-        if (subscriptionCount > 1) {
-          throw new BadRequestException(
-            `Cannot remove holder while there are other family members`,
-          );
-        }
-      }
-    }
-
-    await this.planSubscriptionRepository.remove(subscription);
+    const column = allowedFields.includes(sortBy) ? sortBy : 'createdAt';
+    queryBuilder.addOrderBy(`planSubscription.${column}`, direction);
   }
 }
+
+type PlanSubscriptionFilters = Omit<
+  QueryPlanSubscriptionsDto,
+  'page' | 'limit' | 'sortBy' | 'sortOrder'
+>;

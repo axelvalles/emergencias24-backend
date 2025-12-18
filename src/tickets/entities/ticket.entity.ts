@@ -1,12 +1,12 @@
 import {
   Entity,
-  PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
   UpdateDateColumn,
   ManyToOne,
-  JoinColumn,
   BeforeInsert,
+  PrimaryColumn,
+  Index,
 } from 'typeorm';
 import { Patient } from '../../patients/entities/patient.entity';
 import { uuidv7 } from 'uuidv7';
@@ -39,24 +39,24 @@ export enum Priority {
 }
 
 @Entity('tickets')
+@Index('IDX_TICKETS_STATUS_CREATED', ['status', 'createdAt'])
+@Index('IDX_TICKETS_ASSIGNED', ['assignedUser', 'status'])
+@Index('IDX_TICKETS_PATIENT', ['patient'])
 export class Ticket {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn('uuid')
   id: string;
 
   @BeforeInsert()
   generateUuid() {
-    if (!this.id) {
-      this.id = uuidv7();
-    }
+    this.id = uuidv7();
   }
 
-  @Column({ type: 'int', unique: true, generated: 'increment' })
+  @Column({ type: 'int', generated: 'increment' })
   referenceNumber: number;
 
   @Column({
     type: 'enum',
     enum: ServiceType,
-    nullable: false,
   })
   serviceType: ServiceType;
 
@@ -74,49 +74,47 @@ export class Ticket {
   })
   priority: Priority;
 
-  @Column({ nullable: true })
-  patientId: string;
+  @ManyToOne(() => Patient, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  patient?: Patient | null;
 
-  @ManyToOne(() => Patient, { nullable: true })
-  @JoinColumn({ name: 'patientId' })
-  patient: Patient;
-
-  @Column({ nullable: false })
+  @Column()
   requesterPhone: string;
 
   @Column({ type: 'text', nullable: true })
-  requesterName: string;
+  requesterName?: string;
 
   @Column({ type: 'text', nullable: true })
-  location: string;
+  location?: string;
 
   @Column({ type: 'text', nullable: true })
-  municipality: string;
+  municipality?: string;
 
   @Column({ type: 'text', nullable: true })
-  speciality: string;
+  speciality?: string;
 
   @Column({ type: 'text', nullable: true })
-  description: string;
+  description?: string;
 
   @Column({ type: 'text', nullable: true })
-  note: string;
+  note?: string;
 
   @Column({ type: 'text', nullable: true })
-  cancellationReason: string;
+  cancellationReason?: string;
 
-  @Column({ nullable: true })
-  assignedTo: string;
-
-  @ManyToOne(() => User, { nullable: true })
-  @JoinColumn({ name: 'assignedTo' })
-  user: User;
+  @ManyToOne(() => User, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  assignedUser?: User | null;
 
   @Column({ type: 'timestamp', nullable: true })
-  assignedAt: Date;
+  assignedAt?: Date;
 
   @Column({ type: 'timestamp', nullable: true })
-  completedAt: Date;
+  completedAt?: Date;
 
   @CreateDateColumn()
   createdAt: Date;

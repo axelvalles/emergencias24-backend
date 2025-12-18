@@ -1,61 +1,57 @@
 import {
   Entity,
-  PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
   UpdateDateColumn,
   BeforeInsert,
   ManyToOne,
-  JoinColumn,
+  PrimaryColumn,
+  Index,
 } from 'typeorm';
 import { uuidv7 } from 'uuidv7';
-import { PlanGroup } from './plan-group.entity';
 import { Patient } from '../../patients/entities/patient.entity';
-
-export enum PlanSubscriptionRole {
-  HOLDER = 'HOLDER',
-  BENEFICIARY = 'BENEFICIARY',
-  MEMBER = 'MEMBER',
-}
+import { Plan } from './plan.entity';
+import { Company } from 'src/companies/entities/company.entity';
 
 export enum PlanSubscriptionStatus {
   ACTIVE = 'ACTIVE',
-  INACTIVE = 'INACTIVE',
   SUSPENDED = 'SUSPENDED',
   CANCELLED = 'CANCELLED',
+  EXPIRED = 'EXPIRED',
+}
+
+export enum PayerType {
+  PATIENT = 'PATIENT',
+  COMPANY = 'COMPANY',
 }
 
 @Entity('plan_subscriptions')
+@Index('IDX_PS_PATIENT_ACTIVE', ['patient', 'status', 'startDate', 'endDate'])
+@Index('IDX_PS_COMPANY_ACTIVE', ['company', 'status'])
 export class PlanSubscription {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn('uuid')
   id: string;
 
   @BeforeInsert()
   generateUuid() {
-    if (!this.id) {
-      this.id = uuidv7();
-    }
+    this.id = uuidv7();
   }
+  /* =====================
+     Relaciones
+     ===================== */
 
-  @ManyToOne(() => Patient)
-  @JoinColumn({ name: 'patient_id' })
+  @ManyToOne(() => Patient, { nullable: false, onDelete: 'RESTRICT' })
   patient: Patient;
 
-  @Column({ type: 'uuid' })
-  patient_id: string;
+  @ManyToOne(() => Plan, { nullable: false, onDelete: 'RESTRICT' })
+  plan: Plan;
 
-  @ManyToOne(() => PlanGroup)
-  @JoinColumn({ name: 'plan_group_id' })
-  plan_group: PlanGroup;
+  @ManyToOne(() => Company, { nullable: true, onDelete: 'SET NULL' })
+  company?: Company | null;
 
-  @Column({ type: 'uuid' })
-  plan_group_id: string;
-
-  @Column({
-    type: 'enum',
-    enum: PlanSubscriptionRole,
-  })
-  role: PlanSubscriptionRole;
+  /* =====================
+     Reglas de cobertura
+     ===================== */
 
   @Column({
     type: 'enum',
@@ -64,21 +60,25 @@ export class PlanSubscription {
   })
   status: PlanSubscriptionStatus;
 
+  @Column({
+    type: 'enum',
+    enum: PayerType,
+  })
+  payerType: PayerType;
+
   @Column({ type: 'date' })
-  start_date: Date;
+  startDate: Date;
 
   @Column({ type: 'date', nullable: true })
-  end_date: Date;
+  endDate?: Date | null;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
-  monthly_cost: number;
+  /* =====================
+     Auditoría
+     ===================== */
 
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
-  annual_cost: number;
+  @CreateDateColumn()
+  createdAt: Date;
 
-  @CreateDateColumn({ type: 'timestamp' })
-  created_at: Date;
-
-  @UpdateDateColumn({ type: 'timestamp', nullable: true })
-  updated_at: Date;
+  @UpdateDateColumn()
+  updatedAt: Date;
 }

@@ -4,9 +4,10 @@ import { TicketsService } from './tickets.service';
 import { TicketsController } from './tickets.controller';
 import { TicketsGateway } from './tickets.gateway';
 import { Ticket } from './entities/ticket.entity';
+import { UsersModule } from 'src/users/users.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Ticket])],
+  imports: [TypeOrmModule.forFeature([Ticket]), UsersModule],
   controllers: [TicketsController],
   providers: [TicketsService, TicketsGateway],
   exports: [TicketsService, TicketsGateway],

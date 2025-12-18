@@ -1,13 +1,14 @@
 import {
   Entity,
-  PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
   BeforeInsert,
   OneToMany,
+  PrimaryColumn,
 } from 'typeorm';
 import { uuidv7 } from 'uuidv7';
 import { PlanSubscription } from '../../plans/entities/plan-subscription.entity';
+import { Expose } from 'class-transformer';
 
 export enum Gender {
   MALE = 'Male',
@@ -42,24 +43,22 @@ export enum DocumentType {
 
 @Entity('patients')
 export class Patient {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn('uuid')
   id: string;
 
   @BeforeInsert()
   generateUuid() {
-    if (!this.id) {
-      this.id = uuidv7();
-    }
+    this.id = uuidv7();
   }
 
   @Column({ type: 'varchar', length: 100 })
-  first_name: string;
+  firstName: string;
 
   @Column({ type: 'varchar', length: 100 })
-  last_name: string;
+  lastName: string;
 
   @Column({ type: 'date', nullable: true })
-  birth_date: Date;
+  birthDate: Date;
 
   @Column({
     type: 'enum',
@@ -71,10 +70,10 @@ export class Patient {
     type: 'enum',
     enum: DocumentType,
   })
-  document_type: DocumentType;
+  documentType: DocumentType;
 
   @Column({ type: 'varchar', length: 50, unique: true })
-  document_number: string;
+  documentNumber: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   address: string;
@@ -86,55 +85,53 @@ export class Patient {
   state: string;
 
   @Column({ type: 'varchar', length: 20, nullable: true })
-  zip_code: string;
+  zipCode: string;
 
   @Column({ type: 'varchar', length: 20, nullable: true })
   phone: string;
 
   @Column({ type: 'varchar', length: 20, nullable: true })
-  secondary_phone: string;
+  secondaryPhone: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
-  emergency_contact_name: string;
+  emergencyContactName: string;
 
   @Column({ type: 'varchar', length: 20, nullable: true })
-  emergency_contact_phone: string;
+  emergencyContactPhone: string;
 
   @Column({
     type: 'enum',
     enum: BloodType,
     nullable: true,
   })
-  blood_type: BloodType;
+  bloodType: BloodType;
 
   @Column({ type: 'text', nullable: true })
   allergies: string;
 
   @Column({ type: 'text', nullable: true })
-  medical_conditions: string;
+  medicalConditions: string;
 
   @Column({
     type: 'enum',
     enum: PatientStatus,
     default: PatientStatus.ACTIVE,
   })
-  patient_status: PatientStatus;
-
-  @Column({ type: 'varchar', length: 50, nullable: true })
-  medical_record_number: string;
+  status: PatientStatus;
 
   @CreateDateColumn({ type: 'timestamp' })
-  created_at: Date;
+  createdAt: Date;
 
   @Column({ type: 'timestamp', nullable: true })
-  updated_at: Date;
+  updatedAt: Date;
 
   // --- Relationships ---
   @OneToMany(() => PlanSubscription, (subscription) => subscription.patient)
   subscriptions: PlanSubscription[];
 
   // --- Calculated ---
+  @Expose()
   get fullName() {
-    return `${this.first_name} ${this.last_name}`;
+    return `${this.firstName} ${this.lastName}`;
   }
 }
