@@ -8,7 +8,7 @@ import {
   Index,
 } from 'typeorm';
 import { uuidv7 } from 'uuidv7';
-import { Expose } from 'class-transformer';
+import { Exclude, Expose } from 'class-transformer';
 
 export enum UserRole {
   SUPER_ADMIN = 'superAdmin',
@@ -50,6 +50,7 @@ export class User {
   email: string;
 
   @Column({ type: 'varchar', length: 255 })
+  @Exclude()
   passwordHash: string;
 
   @Column({

@@ -50,20 +50,22 @@ export class TelemedicineWaitingIdHandler extends BaseHandler {
       };
     }
 
-    // TODO: Generar alerta a operador en despacho
-    await services.ticketsService.create({
-      serviceType: ServiceType.TELEMEDICINE,
-      priority: Priority.HIGH,
-      requesterPhone: from,
-      requesterName: profileName,
-      patientId: patient.id,
-      location: location
-        ? `${location.latitude},${location.longitude}`
-        : undefined,
-      description: location
-        ? `Solicitud de telemedicina en coordenadas (${location.latitude}, ${location.longitude})`
-        : `Solicitud de telemedicina en la ubicación: ${body.trim()}`,
-    });
+    await services.ticketsService.create(
+      {
+        serviceType: ServiceType.TELEMEDICINE,
+        priority: Priority.HIGH,
+        requesterPhone: from,
+        requesterName: profileName,
+        patientId: patient.id,
+        location: location
+          ? `${location.latitude},${location.longitude}`
+          : undefined,
+        description: location
+          ? `Solicitud de telemedicina en coordenadas (${location.latitude}, ${location.longitude})`
+          : `Solicitud de telemedicina en la ubicación: ${body.trim()}`,
+      },
+      patient,
+    );
 
     await services.messaging.sendMessage(
       messagingResponse.from,

@@ -7,6 +7,7 @@ import {
   ManyToOne,
   PrimaryColumn,
   Index,
+  JoinColumn,
 } from 'typeorm';
 import { uuidv7 } from 'uuidv7';
 import { Patient } from '../../patients/entities/patient.entity';
@@ -16,7 +17,7 @@ import { Company } from 'src/companies/entities/company.entity';
 export enum PlanSubscriptionStatus {
   ACTIVE = 'ACTIVE',
   SUSPENDED = 'SUSPENDED',
-  CANCELLED = 'CANCELLED',
+  CANCELED = 'CANCELED',
   EXPIRED = 'EXPIRED',
 }
 
@@ -28,6 +29,7 @@ export enum PayerType {
 @Entity('plan_subscriptions')
 @Index('IDX_PS_PATIENT_ACTIVE', ['patient', 'status', 'startDate', 'endDate'])
 @Index('IDX_PS_COMPANY_ACTIVE', ['company', 'status'])
+@Index('IDX_PS_PAYER_PATIENT', ['payerPatient', 'status'])
 export class PlanSubscription {
   @PrimaryColumn('uuid')
   id: string;
@@ -48,6 +50,15 @@ export class PlanSubscription {
 
   @ManyToOne(() => Company, { nullable: true, onDelete: 'SET NULL' })
   company?: Company | null;
+
+  /**
+   * For FAMILY plans: the patient who owns/pays for the plan.
+   * Family members will have this field set to the main subscriber.
+   * The main subscriber will have this field as null.
+   */
+  @ManyToOne(() => Patient, { nullable: true, onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'payer_patient_id' })
+  payerPatient?: Patient | null;
 
   /* =====================
      Reglas de cobertura

@@ -18,6 +18,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from './entities/user.entity';
 import { QueryUserDto } from './dto/query-user.dto';
+import { SearchUserDto } from './dto/search-user.dto';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -28,6 +29,20 @@ export class UsersController {
   @Roles(UserRole.CLINIC_ADMIN, UserRole.SUPER_ADMIN)
   create(@Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);
+  }
+
+  @Get('search')
+  @Roles(UserRole.CLINIC_ADMIN, UserRole.SUPER_ADMIN, UserRole.OPERATOR)
+  search(
+    @Query(
+      new ValidationPipe({
+        transform: true,
+        transformOptions: { enableImplicitConversion: true },
+      }),
+    )
+    query: SearchUserDto,
+  ) {
+    return this.usersService.search(query);
   }
 
   @Get()

@@ -5,6 +5,7 @@ import { User, UserStatus } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { QueryUserDto } from './dto/query-user.dto';
+import { SearchUserDto } from './dto/search-user.dto';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -26,6 +27,41 @@ export class UsersService {
     const savedUser = await this.userRepository.save(user);
 
     return savedUser;
+  }
+
+  async search(searchDto: SearchUserDto): Promise<User[]> {
+    const { term, role, limit = 10 } = searchDto;
+
+    const queryBuilder = this.userRepository.createQueryBuilder('user');
+
+    if (term) {
+      const searchTerm = `%${term.toLowerCase()}%`;
+      queryBuilder.andWhere(
+        '(LOWER(user.firstName) LIKE :term OR LOWER(user.lastName) LIKE :term OR LOWER(user.email) LIKE :term OR LOWER(CONCAT(user.firstName, " ", user.lastName)) LIKE :term)',
+        { term: searchTerm },
+      );
+    }
+
+    if (role) {
+      const roles = Array.isArray(role) ? role : [role];
+      queryBuilder.andWhere('user.role IN (:...roles)', { roles });
+    }
+
+    queryBuilder.andWhere('user.status = :status', {
+      status: UserStatus.ACTIVE,
+    });
+
+    queryBuilder.select([
+      'user.id',
+      'user.firstName',
+      'user.lastName',
+      'user.email',
+      'user.role',
+    ]);
+
+    queryBuilder.take(limit);
+
+    return queryBuilder.getMany();
   }
 
   async findAll(queryDto: QueryUserDto = {}): Promise<{

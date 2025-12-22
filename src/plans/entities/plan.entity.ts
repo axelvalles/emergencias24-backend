@@ -17,6 +17,7 @@ export enum PlanStatus {
 export enum PlanType {
   FAMILY = 'FAMILY',
   CORPORATE = 'CORPORATE',
+  GROUP = 'GROUP',
 }
 
 export interface PlanBenefits {
