@@ -11,14 +11,8 @@ import { uuidv7 } from 'uuidv7';
 import { Exclude, Expose } from 'class-transformer';
 
 export enum UserRole {
-  SUPER_ADMIN = 'superAdmin',
-  CLINIC_ADMIN = 'clinicAdmin',
+  ADMIN = 'admin',
   OPERATOR = 'operator',
-  DOCTOR = 'doctor',
-  NURSE = 'nurse',
-  RECEPTIONIST = 'receptionist',
-  LABADMIN = 'labAdmin',
-  FINANCE = 'finance',
 }
 
 export enum UserStatus {
@@ -56,7 +50,7 @@ export class User {
   @Column({
     type: 'enum',
     enum: UserRole,
-    default: UserRole.CLINIC_ADMIN,
+    default: UserRole.ADMIN,
   })
   role: UserRole;
 

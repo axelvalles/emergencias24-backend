@@ -26,13 +26,13 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
-  @Roles(UserRole.CLINIC_ADMIN, UserRole.SUPER_ADMIN)
+  @Roles( UserRole.ADMIN)
   create(@Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);
   }
 
   @Get('search')
-  @Roles(UserRole.CLINIC_ADMIN, UserRole.SUPER_ADMIN, UserRole.OPERATOR)
+  @Roles( UserRole.ADMIN, UserRole.OPERATOR)
   search(
     @Query(
       new ValidationPipe({
@@ -46,7 +46,7 @@ export class UsersController {
   }
 
   @Get()
-  @Roles(UserRole.CLINIC_ADMIN, UserRole.SUPER_ADMIN)
+  @Roles( UserRole.ADMIN)
   findAll(
     @Query(
       new ValidationPipe({
@@ -60,31 +60,31 @@ export class UsersController {
   }
 
   @Get(':id')
-  @Roles(UserRole.CLINIC_ADMIN, UserRole.SUPER_ADMIN)
+  @Roles( UserRole.ADMIN)
   findOne(@Param('id') id: string) {
     return this.usersService.findOne(id);
   }
 
   @Patch(':id')
-  @Roles(UserRole.CLINIC_ADMIN, UserRole.SUPER_ADMIN)
+  @Roles( UserRole.ADMIN)
   update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.update(id, updateUserDto);
   }
 
   @Delete(':id')
-  @Roles(UserRole.CLINIC_ADMIN, UserRole.SUPER_ADMIN)
+  @Roles( UserRole.ADMIN)
   remove(@Param('id') id: string) {
     return this.usersService.remove(id);
   }
 
   @Post(':id/activate')
-  @Roles(UserRole.CLINIC_ADMIN, UserRole.SUPER_ADMIN)
+  @Roles( UserRole.ADMIN)
   activate(@Param('id') id: string) {
     return this.usersService.activateUser(id);
   }
 
   @Post(':id/deactivate')
-  @Roles(UserRole.CLINIC_ADMIN, UserRole.SUPER_ADMIN)
+  @Roles( UserRole.ADMIN)
   deactivate(@Param('id') id: string) {
     return this.usersService.deactivateUser(id);
   }

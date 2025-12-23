@@ -25,7 +25,7 @@ async function main() {
 
     // Check if super admin already exists
     const existingSuperAdmin = await userRepository.findOne({
-      where: { role: UserRole.SUPER_ADMIN },
+      where: { role: UserRole.ADMIN },
     });
 
     if (existingSuperAdmin) {
@@ -41,7 +41,7 @@ async function main() {
     const superAdmin = userRepository.create({
       email,
       passwordHash: passwordHash,
-      role: UserRole.SUPER_ADMIN,
+      role: UserRole.ADMIN,
       status: UserStatus.ACTIVE,
       firstName: firstName,
       lastName: lastName,
