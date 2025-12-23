@@ -24,8 +24,8 @@ export class CompaniesController {
   }
 
   @Get()
-  findAll(@Query() query: QueryCompaniesDto) {
-    return this.companiesService.findAll(query);
+  findWithPagination(@Query() query: QueryCompaniesDto) {
+    return this.companiesService.findWithPagination(query);
   }
 
   @Get(':id')

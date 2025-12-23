@@ -13,7 +13,6 @@ import { Expose } from 'class-transformer';
 export enum Gender {
   MALE = 'Male',
   FEMALE = 'Female',
-  OTHER = 'Other',
 }
 
 export enum BloodType {
@@ -37,7 +36,6 @@ export enum DocumentType {
   CC = 'CC',
   CE = 'CE',
   PASSPORT = 'PASSPORT',
-  NIT = 'NIT',
   OTHER = 'OTHER',
 }
 

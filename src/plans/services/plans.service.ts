@@ -59,6 +59,12 @@ export class PlansService {
     };
   }
 
+  async findAllActive() {
+    return this.planRepository.find({
+      where: { status: PlanStatus.ACTIVE },
+    });
+  }
+
   async findOne(id: string): Promise<Plan> {
     const plan = await this.planRepository.findOne({
       where: { id },

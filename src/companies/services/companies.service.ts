@@ -18,7 +18,7 @@ export class CompaniesService {
     return this.companyRepository.save(company);
   }
 
-  async findAll(queryDto: QueryCompaniesDto = {}): Promise<{
+  async findWithPagination(queryDto: QueryCompaniesDto = {}): Promise<{
     data: Company[];
     total: number;
     page: number;
@@ -54,6 +54,10 @@ export class CompaniesService {
       limit: sanitizedLimit,
       totalPages: Math.ceil(total / sanitizedLimit),
     };
+  }
+
+  async findAll() {
+    return await this.companyRepository.find();
   }
 
   async findOne(id: string): Promise<Company> {

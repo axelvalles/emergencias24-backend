@@ -22,14 +22,17 @@ export class PlanSubscriptionUpdateException extends HttpException {
   constructor(
     message: string,
     public readonly errorCode: PlanSubscriptionUpdateErrorCode,
+    public readonly meta?: Record<string, any>,
+    status: HttpStatus = HttpStatus.BAD_REQUEST,
   ) {
     super(
       {
         message,
         errorCode,
-        statusCode: HttpStatus.BAD_REQUEST,
+        meta,
+        statusCode: status,
       },
-      HttpStatus.BAD_REQUEST,
+      status,
     );
   }
 }
