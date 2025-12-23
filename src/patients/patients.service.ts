@@ -3,7 +3,8 @@ import { CreatePatientDto } from './dto/create-patient.dto';
 import { UpdatePatientDto } from './dto/update-patient.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Patient, PatientStatus } from './entities/patient.entity';
-import { Repository } from 'typeorm';
+import { Repository, SelectQueryBuilder } from 'typeorm';
+import { QueryPatientsDto } from './dto/query-patients.dto';
 
 @Injectable()
 export class PatientsService {
@@ -17,53 +18,47 @@ export class PatientsService {
     return this.patientRepository.save(patient);
   }
 
-  async findAll(): Promise<Patient[]> {
-    return this.patientRepository.find({
-      relations: ['subscriptions', 'clinical_records'],
-      select: {
-        id: true,
-        first_name: true,
-        last_name: true,
-        birth_date: true,
-        gender: true,
-        document_type: true,
-        document_number: true,
-        phone: true,
-        patient_status: true,
-        created_at: true,
-        updated_at: true,
-      },
-    });
+  async findAll(queryDto: QueryPatientsDto = {}): Promise<{
+    data: Patient[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = 'createdAt',
+      sortOrder = 'DESC',
+      ...filters
+    } = queryDto;
+
+    const queryBuilder = this.patientRepository.createQueryBuilder('patient');
+
+    // Aplicar filtros
+    this.applyFilters(queryBuilder, filters);
+
+    // Aplicar ordenamiento
+    this.applySorting(queryBuilder, sortBy, sortOrder);
+
+    // Aplicar paginación
+    const skip = (page - 1) * limit;
+    queryBuilder.skip(skip).take(limit);
+
+    const [data, total] = await queryBuilder.getManyAndCount();
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async findOne(id: string): Promise<Patient> {
     const patient = await this.patientRepository.findOne({
       where: { id },
-      relations: ['subscriptions', 'clinical_records'],
-      select: {
-        id: true,
-        first_name: true,
-        last_name: true,
-        birth_date: true,
-        gender: true,
-        document_type: true,
-        document_number: true,
-        address: true,
-        city: true,
-        state: true,
-        zip_code: true,
-        phone: true,
-        secondary_phone: true,
-        emergency_contact_name: true,
-        emergency_contact_phone: true,
-        blood_type: true,
-        allergies: true,
-        medical_conditions: true,
-        patient_status: true,
-        medical_record_number: true,
-        created_at: true,
-        updated_at: true,
-      },
     });
 
     if (!patient) {
@@ -80,9 +75,17 @@ export class PatientsService {
   }
 
   async findByDocument(documentNumber: string): Promise<Patient | null> {
-    return this.patientRepository.findOne({
-      where: { document_number: documentNumber },
+    const patient = await this.patientRepository.findOne({
+      where: { documentNumber },
     });
+
+    if (!patient) {
+      throw new NotFoundException(
+        `Patient with document number ${documentNumber} not found`,
+      );
+    }
+
+    return patient;
   }
 
   async update(
@@ -93,8 +96,15 @@ export class PatientsService {
 
     // Update the patient with the new data
     Object.assign(patient, updatePatientDto);
-    patient.updated_at = new Date();
+    patient.updatedAt = new Date();
 
+    return this.patientRepository.save(patient);
+  }
+
+  async updateStatus(id: string, status: PatientStatus): Promise<Patient> {
+    const patient = await this.findOne(id);
+    patient.status = status;
+    patient.updatedAt = new Date();
     return this.patientRepository.save(patient);
   }
 
@@ -105,29 +115,88 @@ export class PatientsService {
 
   async activatePatient(id: string): Promise<Patient> {
     const patient = await this.findOne(id);
-    patient.patient_status = PatientStatus.ACTIVE;
-    patient.updated_at = new Date();
+    patient.status = PatientStatus.ACTIVE;
+    patient.updatedAt = new Date();
     return this.patientRepository.save(patient);
   }
 
   async deactivatePatient(id: string): Promise<Patient> {
     const patient = await this.findOne(id);
-    patient.patient_status = PatientStatus.INACTIVE;
-    patient.updated_at = new Date();
+    patient.status = PatientStatus.INACTIVE;
+    patient.updatedAt = new Date();
     return this.patientRepository.save(patient);
   }
 
   async findActivePatients(): Promise<Patient[]> {
     return this.patientRepository.find({
-      where: { patient_status: PatientStatus.ACTIVE },
+      where: { status: PatientStatus.ACTIVE },
 
       select: {
         id: true,
-        first_name: true,
-        last_name: true,
+        firstName: true,
+        lastName: true,
         phone: true,
-        patient_status: true,
+        status: true,
       },
     });
+  }
+
+  private applyFilters(
+    queryBuilder: SelectQueryBuilder<Patient>,
+    filters: Partial<QueryPatientsDto>,
+  ): void {
+    console.log(filters);
+
+    if (filters.fullName) {
+      const fullName = filters.fullName.trim().toLowerCase();
+
+      queryBuilder.andWhere(
+        `
+      (
+        LOWER(patient.firstName) LIKE :fullName
+        OR LOWER(patient.lastName) LIKE :fullName
+        OR LOWER(CONCAT(patient.firstName, ' ', patient.lastName)) LIKE :fullName
+      )
+    `,
+        { fullName: `%${fullName}%` },
+      );
+    }
+
+    if (filters.documentNumber) {
+      const documentNumber = filters.documentNumber.trim().toLowerCase();
+
+      queryBuilder.andWhere(
+        `
+      (
+        LOWER(patient.documentNumber) LIKE :documentNumber
+      )
+    `,
+        { documentNumber: `%${documentNumber}%` },
+      );
+    }
+
+    if (filters.status && filters.status.length > 0) {
+      queryBuilder.andWhere('patient.status IN (:...status)', {
+        status: filters.status,
+      });
+    }
+  }
+
+  private applySorting(
+    qb: SelectQueryBuilder<Patient>,
+    sortBy: string,
+    sortOrder: 'ASC' | 'DESC',
+  ) {
+    const direction = sortOrder;
+
+    switch (sortBy) {
+      case 'fullName':
+        qb.addOrderBy('patient.firstName', direction);
+        qb.addOrderBy('patient.lastName', direction);
+        break;
+
+      default:
+        qb.addOrderBy(`patient.${sortBy}`, direction);
+    }
   }
 }

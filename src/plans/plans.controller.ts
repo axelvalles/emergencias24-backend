@@ -1,16 +1,18 @@
 import {
-  Controller,
-  Get,
-  Post,
   Body,
-  Patch,
-  Param,
+  Controller,
   Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
   Put,
+  Query,
 } from '@nestjs/common';
 import { PlansService } from './services/plans.service';
 import { CreatePlanDto } from './dto/create-plan.dto';
 import { UpdatePlanDto } from './dto/update-plan.dto';
+import { QueryPlansDto } from './dto/query-plans.dto';
 
 @Controller('plans')
 export class PlansController {
@@ -22,8 +24,8 @@ export class PlansController {
   }
 
   @Get()
-  findAll() {
-    return this.plansService.findAll();
+  findAll(@Query() query: QueryPlansDto) {
+    return this.plansService.findAll(query);
   }
 
   @Get(':id')

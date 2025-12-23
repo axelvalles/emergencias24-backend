@@ -1,5 +1,5 @@
 import * as bcrypt from 'bcrypt';
-import { User, UserRole } from '../users/entities/user.entity';
+import { User, UserRole, UserStatus } from '../users/entities/user.entity';
 import AppDataSource from '../config/typeorm.config';
 
 async function main() {
@@ -25,7 +25,7 @@ async function main() {
 
     // Check if super admin already exists
     const existingSuperAdmin = await userRepository.findOne({
-      where: { roles: UserRole.SUPER_ADMIN },
+      where: { role: UserRole.ADMIN },
     });
 
     if (existingSuperAdmin) {
@@ -40,11 +40,11 @@ async function main() {
 
     const superAdmin = userRepository.create({
       email,
-      password_hash: passwordHash,
-      roles: UserRole.SUPER_ADMIN,
-      is_active: true,
-      first_name: firstName,
-      last_name: lastName,
+      passwordHash: passwordHash,
+      role: UserRole.ADMIN,
+      status: UserStatus.ACTIVE,
+      firstName: firstName,
+      lastName: lastName,
       phone: process.env.SUPERUSER_PHONE || null,
     });
 

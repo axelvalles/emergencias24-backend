@@ -1,12 +1,32 @@
 import {
   IsString,
   IsOptional,
-  IsEnum,
-  IsObject,
   IsNumber,
-  IsDateString,
+  IsBoolean,
+  ValidateNested,
+  IsEnum,
 } from 'class-validator';
-import { PlanType, PlanStatus, GroupCategory } from '../entities/plan.entity';
+import { Type } from 'class-transformer';
+import { PlanType, PlanStatus } from '../entities/plan.entity';
+
+export class PlanBenefitsDto {
+  @IsBoolean()
+  consultations: boolean;
+
+  @IsBoolean()
+  emergencyCoverage: boolean;
+
+  @IsBoolean()
+  dental: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  optometry?: boolean;
+
+  @IsOptional()
+  @IsString()
+  notes?: string;
+}
 
 export class CreatePlanDto {
   @IsString()
@@ -16,33 +36,18 @@ export class CreatePlanDto {
   @IsString()
   description?: string;
 
+  @ValidateNested()
+  @Type(() => PlanBenefitsDto)
+  benefits: PlanBenefitsDto;
+
   @IsEnum(PlanType)
-  plan_type: PlanType;
+  planType: PlanType;
 
   @IsOptional()
-  @IsEnum(GroupCategory)
-  group_category?: GroupCategory;
-
-  @IsOptional()
-  @IsNumber()
-  min_members?: number;
-
-  @IsObject()
-  benefits: object;
+  @IsEnum(PlanStatus)
+  status?: PlanStatus;
 
   @IsOptional()
   @IsNumber()
-  monthly_cost?: number;
-
-  @IsOptional()
-  @IsNumber()
-  annual_cost?: number;
-
-  @IsOptional()
-  @IsDateString()
-  valid_from?: Date;
-
-  @IsOptional()
-  @IsDateString()
-  valid_until?: Date;
+  monthlyCost?: number;
 }

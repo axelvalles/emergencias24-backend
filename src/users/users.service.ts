@@ -1,9 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { User } from './entities/user.entity';
+import { Repository, SelectQueryBuilder } from 'typeorm';
+import { User, UserStatus } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { QueryUserDto } from './dto/query-user.dto';
+import { SearchUserDto } from './dto/search-user.dto';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
@@ -12,29 +15,109 @@ export class UsersService {
     private readonly userRepository: Repository<User>,
   ) {}
 
+  async encryptPassword(password: string): Promise<string> {
+    const salt = await bcrypt.genSalt(10);
+    return await bcrypt.hash(password, salt);
+  }
+
   async create(createUserDto: CreateUserDto): Promise<User> {
     const user = this.userRepository.create(createUserDto);
-    await user.hashPassword();
-
-    // Save user first to get the ID
+    const passwordHash = await this.encryptPassword(createUserDto.password);
+    user.passwordHash = passwordHash;
     const savedUser = await this.userRepository.save(user);
-
-    // Create related entities based on roles
-    // await this.createRelatedEntities(savedUser);
 
     return savedUser;
   }
 
-  async findAll(): Promise<User[]> {
-    return this.userRepository.find({
-      select: ['id', 'email', 'roles', 'is_active', 'created_at', 'updated_at'],
+  async search(searchDto: SearchUserDto): Promise<User[]> {
+    const { term, role, limit = 10 } = searchDto;
+
+    const queryBuilder = this.userRepository.createQueryBuilder('user');
+
+    if (term) {
+      const searchTerm = `%${term.toLowerCase()}%`;
+      queryBuilder.andWhere(
+        '(LOWER(user.firstName) LIKE :term OR LOWER(user.lastName) LIKE :term OR LOWER(user.email) LIKE :term OR LOWER(CONCAT(user.firstName, " ", user.lastName)) LIKE :term)',
+        { term: searchTerm },
+      );
+    }
+
+    if (role) {
+      const roles = Array.isArray(role) ? role : [role];
+      queryBuilder.andWhere('user.role IN (:...roles)', { roles });
+    }
+
+    queryBuilder.andWhere('user.status = :status', {
+      status: UserStatus.ACTIVE,
     });
+
+    queryBuilder.select([
+      'user.id',
+      'user.firstName',
+      'user.lastName',
+      'user.email',
+      'user.role',
+    ]);
+
+    queryBuilder.take(limit);
+
+    return queryBuilder.getMany();
+  }
+
+  async findAll(queryDto: QueryUserDto = {}): Promise<{
+    data: User[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = 'createdAt',
+      sortOrder = 'DESC',
+      ...filters
+    } = queryDto;
+
+    const queryBuilder = this.userRepository.createQueryBuilder('user');
+
+    // Aplicar filtros
+    this.applyFilters(queryBuilder, filters);
+
+    // Aplicar ordenamiento
+    this.applySorting(queryBuilder, sortBy, sortOrder);
+
+    // Aplicar paginación
+    const skip = (page - 1) * limit;
+    queryBuilder.skip(skip).take(limit);
+
+    queryBuilder.select([
+      'user.id',
+      'user.firstName',
+      'user.lastName',
+      'user.phone',
+      'user.email',
+      'user.role',
+      'user.status',
+      'user.createdAt',
+      'user.updatedAt',
+      'user.lastLogin',
+    ]);
+
+    const [data, total] = await queryBuilder.getManyAndCount();
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async findOne(id: string): Promise<User | null> {
     return this.userRepository.findOne({
       where: { id },
-      select: ['id', 'email', 'roles', 'is_active', 'created_at', 'updated_at'],
     });
   }
 
@@ -42,9 +125,28 @@ export class UsersService {
     return this.userRepository.findOne({ where: { email } });
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto): Promise<User | null> {
-    await this.userRepository.update(id, updateUserDto);
-    return this.findOne(id);
+  async update(id: string, updateUserDto: UpdateUserDto) {
+    const user = await this.findOne(id);
+
+    if (!user) {
+      return null;
+    }
+
+    const { password, ...updateData } = updateUserDto;
+
+    if (password) {
+      const passwordHash = await this.encryptPassword(password);
+      user.passwordHash = passwordHash;
+    }
+
+    Object.assign(user, updateData);
+
+    const updatedUser = await this.userRepository.save(user);
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { passwordHash, ...userWithoutPassword } = updatedUser;
+
+    return userWithoutPassword;
   }
 
   async remove(id: string): Promise<void> {
@@ -52,12 +154,90 @@ export class UsersService {
   }
 
   async activateUser(id: string): Promise<User | null> {
-    await this.userRepository.update(id, { is_active: true });
+    await this.userRepository.update(id, { status: UserStatus.ACTIVE });
     return this.findOne(id);
   }
 
   async deactivateUser(id: string): Promise<User | null> {
-    await this.userRepository.update(id, { is_active: false });
+    await this.userRepository.update(id, { status: UserStatus.INACTIVE });
     return this.findOne(id);
+  }
+
+  private applyFilters(
+    queryBuilder: SelectQueryBuilder<User>,
+    filters: Partial<QueryUserDto>,
+  ): void {
+    console.log(filters);
+
+    if (filters.fullName) {
+      const fullName = filters.fullName.trim().toLowerCase();
+
+      queryBuilder.andWhere(
+        `
+        (
+          LOWER(user.firstName) LIKE :fullName
+          OR LOWER(user.lastName) LIKE :fullName
+          OR LOWER(CONCAT(user.firstName, ' ', user.lastName)) LIKE :fullName
+        )
+      `,
+        { fullName: `%${fullName}%` },
+      );
+    }
+
+    if (filters.email) {
+      const email = filters.email.trim().toLowerCase();
+
+      queryBuilder.andWhere(
+        `
+      (
+        LOWER(user.email) LIKE :email
+      )
+    `,
+        { email: `%${email}%` },
+      );
+    }
+
+    if (filters.phone) {
+      const phone = filters.phone.trim().toLowerCase();
+
+      queryBuilder.andWhere(
+        `
+      (
+        LOWER(user.phone) LIKE :phone
+      )
+    `,
+        { phone: `%${phone}%` },
+      );
+    }
+
+    if (filters.role && filters.role.length > 0) {
+      queryBuilder.andWhere('user.role IN (:...role)', {
+        role: filters.role,
+      });
+    }
+
+    if (filters.status && filters.status.length > 0) {
+      queryBuilder.andWhere('user.status IN (:...status)', {
+        status: filters.status,
+      });
+    }
+  }
+
+  private applySorting(
+    qb: SelectQueryBuilder<User>,
+    sortBy: string,
+    sortOrder: 'ASC' | 'DESC',
+  ) {
+    const direction = sortOrder;
+
+    switch (sortBy) {
+      case 'fullName':
+        qb.addOrderBy('user.firstName', direction);
+        qb.addOrderBy('user.lastName', direction);
+        break;
+
+      default:
+        qb.addOrderBy(`user.${sortBy}`, direction);
+    }
   }
 }

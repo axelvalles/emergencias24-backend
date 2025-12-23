@@ -10,24 +10,24 @@ import { Gender, DocumentType } from '../entities/patient.entity';
 export class CreatePatientDto {
   @IsNotEmpty()
   @IsString()
-  first_name: string;
+  firstName: string;
 
   @IsNotEmpty()
   @IsString()
-  last_name: string;
+  lastName: string;
 
   @IsOptional()
   @IsDateString()
-  birth_date: Date;
+  birthDate: Date;
 
   @IsEnum(Gender)
   gender: Gender;
 
   @IsEnum(DocumentType)
-  document_type: DocumentType;
+  documentType: DocumentType;
 
   @IsString()
-  document_number: string;
+  documentNumber: string;
 
   @IsOptional()
   @IsString()
@@ -43,7 +43,7 @@ export class CreatePatientDto {
 
   @IsOptional()
   @IsString()
-  zip_code?: string;
+  zipCode?: string;
 
   @IsOptional()
   @IsString()
@@ -51,13 +51,21 @@ export class CreatePatientDto {
 
   @IsOptional()
   @IsString()
-  secondary_phone?: string;
+  secondaryPhone?: string;
 
   @IsOptional()
   @IsString()
-  emergency_contact_name?: string;
+  emergencyContactName?: string;
 
   @IsOptional()
   @IsString()
-  emergency_contact_phone?: string;
+  emergencyContactPhone?: string;
+
+  @IsOptional()
+  @IsString()
+  allergies?: string;
+
+  @IsOptional()
+  @IsString()
+  medicalConditions?: string;
 }

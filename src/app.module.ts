@@ -12,6 +12,7 @@ import { AuthModule } from './auth/auth.module';
 import { MessagingModule } from './shared/messaging/messaging.module';
 import { TicketsModule } from './tickets/tickets.module';
 import { PlansModule } from './plans/plans.module';
+import { CompaniesModule } from './companies/companies.module';
 import { twilioConfig } from './config/twilio.config';
 import { dbConfig, typeOrmFactory } from './config/db.config';
 import { envSchema } from './config/configuration';
@@ -64,6 +65,7 @@ const pinoConfig = {
     MessagingModule,
     TicketsModule,
     PlansModule,
+    CompaniesModule,
     BotModule,
     PatientsModule,
     UsersModule,

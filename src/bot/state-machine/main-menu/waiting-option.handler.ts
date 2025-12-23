@@ -54,7 +54,7 @@ export class WaitingMenuOptionHandler extends BaseHandler {
         };
 
       case 'consultas-medicas':
-        await services.messaging.sendTemplate(
+        await services.messaging.sendMessage(
           messagingResponse.from,
           TWILIO_MESSSAGES.MEDICAL_CONSULTATIONS_SPECIALITY,
         );

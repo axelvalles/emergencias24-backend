@@ -1,22 +1,37 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import { Ticket, TicketStatus } from './entities/ticket.entity';
+import { TicketStatusHistory } from './entities/ticket-status-history.entity';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { QueryTicketsDto } from './dto/query-tickets.dto';
 import { TicketsGateway } from './tickets.gateway';
+import { UsersService } from '../users/users.service';
+import { User } from 'src/users/entities/user.entity';
+import { Patient } from 'src/patients/entities/patient.entity';
 
 @Injectable()
 export class TicketsService {
   constructor(
     @InjectRepository(Ticket)
     private readonly ticketRepository: Repository<Ticket>,
+    @InjectRepository(TicketStatusHistory)
+    private readonly historyRepository: Repository<TicketStatusHistory>,
     private readonly ticketsGateway: TicketsGateway,
+    private readonly usersService: UsersService,
   ) {}
 
-  async create(createTicketDto: CreateTicketDto): Promise<Ticket> {
-    const ticket = this.ticketRepository.create(createTicketDto);
+  async create(dto: CreateTicketDto, patient?: Patient): Promise<Ticket> {
+    const ticket = this.ticketRepository.create({ ...dto, patient });
+
     const savedTicket = await this.ticketRepository.save(ticket);
+
+    // Registrar historial inicial
+    await this.createHistory(savedTicket, TicketStatus.PENDING);
 
     // Emitir evento WebSocket
     this.ticketsGateway.emitTicketCreated(savedTicket);
@@ -27,7 +42,7 @@ export class TicketsService {
   async findByReferenceNumber(referenceNumber: number): Promise<Ticket> {
     const ticket = await this.ticketRepository.findOne({
       where: { referenceNumber },
-      relations: ['patient'],
+      relations: ['patient', 'assignedUser'],
     });
 
     if (!ticket) {
@@ -83,7 +98,7 @@ export class TicketsService {
   async findOne(id: string): Promise<Ticket> {
     const ticket = await this.ticketRepository.findOne({
       where: { id },
-      relations: ['patient'],
+      relations: ['patient', 'assignedUser'],
     });
 
     if (!ticket) {
@@ -98,25 +113,66 @@ export class TicketsService {
     await this.ticketRepository.remove(ticket);
   }
 
-  async assignTicket(id: string, assignedTo: string): Promise<Ticket> {
+  async assignTicket(
+    id: string,
+    assignedTo: string,
+    changedBy?: User,
+  ): Promise<Ticket> {
     const ticket = await this.findOne(id);
+    const user = await this.usersService.findOne(assignedTo);
 
-    ticket.assignedTo = assignedTo;
+    if (!user) {
+      throw new NotFoundException(`User with ID ${assignedTo} not found`);
+    }
+
+    ticket.assignedUser = user;
+    ticket.assignedAt = new Date();
     ticket.status = TicketStatus.ASSIGNED;
 
-    await this.ticketRepository.save(ticket);
+    const savedTicket = await this.ticketRepository.save(ticket);
 
-    return ticket;
+    await this.createHistory(
+      savedTicket,
+      TicketStatus.ASSIGNED,
+      changedBy,
+      `Asignado a ${user.firstName} ${user.lastName}`,
+    );
+
+    return savedTicket;
   }
 
-  async completeTicket(id: string): Promise<Ticket> {
+  async startTicket(id: string, user: User): Promise<Ticket> {
+    const ticket = await this.findOne(id);
+
+    if (ticket.status !== TicketStatus.ASSIGNED) {
+      throw new BadRequestException('Only assigned tickets can be started');
+    }
+
+    ticket.status = TicketStatus.IN_PROGRESS;
+
+    const savedTicket = await this.ticketRepository.save(ticket);
+
+    await this.createHistory(
+      savedTicket,
+      TicketStatus.IN_PROGRESS,
+      user,
+      'Ticket iniciado',
+    );
+
+    return savedTicket;
+  }
+
+  async completeTicket(id: string, changedBy?: User): Promise<Ticket> {
     const ticket = await this.findOne(id);
 
     ticket.status = TicketStatus.COMPLETED;
+    ticket.completedAt = new Date();
 
-    await this.ticketRepository.save(ticket);
+    const savedTicket = await this.ticketRepository.save(ticket);
 
-    return ticket;
+    await this.createHistory(savedTicket, TicketStatus.COMPLETED, changedBy);
+
+    return savedTicket;
   }
 
   async updateNote(id: string, note: string): Promise<Ticket> {
@@ -129,15 +185,51 @@ export class TicketsService {
     return ticket;
   }
 
-  async cancelTicket(id: string, cancellationReason: string): Promise<Ticket> {
+  async cancelTicket(
+    id: string,
+    cancellationReason: string,
+    changedBy?: User,
+  ): Promise<Ticket> {
     const ticket = await this.findOne(id);
 
     ticket.cancellationReason = cancellationReason;
     ticket.status = TicketStatus.CANCELLED;
 
-    await this.ticketRepository.save(ticket);
+    const savedTicket = await this.ticketRepository.save(ticket);
 
-    return ticket;
+    await this.createHistory(
+      savedTicket,
+      TicketStatus.CANCELLED,
+      changedBy,
+      `Motivo de cancelación: ${cancellationReason}`,
+    );
+
+    return savedTicket;
+  }
+
+  async getHistory(id: string): Promise<TicketStatusHistory[]> {
+    await this.findOne(id);
+
+    return this.historyRepository.find({
+      where: { ticket: { id } },
+      relations: ['changedBy'],
+      order: { createdAt: 'ASC' },
+    });
+  }
+
+  private async createHistory(
+    ticket: Ticket,
+    status: TicketStatus,
+    changedBy?: User,
+    comment?: string,
+  ): Promise<void> {
+    const history = this.historyRepository.create({
+      ticket,
+      status,
+      changedBy,
+      comment,
+    });
+    await this.historyRepository.save(history);
   }
 
   private applyFilters(
@@ -175,7 +267,7 @@ export class TicketsService {
     }
 
     if (filters.assignedTo) {
-      queryBuilder.andWhere('ticket.assignedTo = :assignedTo', {
+      queryBuilder.andWhere('ticket.assignedUser = :assignedTo', {
         assignedTo: filters.assignedTo,
       });
     }
