@@ -1,27 +1,38 @@
 import {
   IsString,
   IsOptional,
-  IsNumber,
   IsBoolean,
   ValidateNested,
   IsEnum,
+  Matches,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { PlanType, PlanStatus } from '../entities/plan.entity';
 
 export class PlanBenefitsDto {
   @IsBoolean()
-  consultations: boolean;
+  telemedicine: boolean;
 
   @IsBoolean()
-  emergencyCoverage: boolean;
+  medicationDelivery: boolean;
 
   @IsBoolean()
-  dental: boolean;
+  ambulanceTransfer: boolean;
 
-  @IsOptional()
   @IsBoolean()
-  optometry?: boolean;
+  homeCare: boolean;
+
+  @IsBoolean()
+  workplaceCare: boolean;
+
+  @IsBoolean()
+  emergencyRoom: boolean;
+
+  @IsBoolean()
+  specializedConsultations: boolean;
+
+  @IsBoolean()
+  labTests: boolean;
 
   @IsOptional()
   @IsString()
@@ -48,6 +59,9 @@ export class CreatePlanDto {
   status?: PlanStatus;
 
   @IsOptional()
-  @IsNumber()
-  monthlyCost?: number;
+  @IsString()
+  @Matches(/^\d+(\.\d{1,2})?$/, {
+    message: 'monthlyCost must be a valid decimal with up to 2 decimals',
+  })
+  monthlyCost?: string;
 }

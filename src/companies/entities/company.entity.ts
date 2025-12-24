@@ -6,8 +6,10 @@ import {
   BeforeInsert,
   PrimaryColumn,
   Index,
+  OneToMany,
 } from 'typeorm';
 import { uuidv7 } from 'uuidv7';
+import { Patient } from '../../patients/entities/patient.entity';
 
 export enum CompanyStatus {
   ACTIVE = 'ACTIVE',
@@ -53,4 +55,7 @@ export class Company {
 
   @UpdateDateColumn({ type: 'timestamp', nullable: true })
   updatedAt: Date;
+
+  @OneToMany(() => Patient, (patient) => patient.company)
+  patients: Patient[];
 }

@@ -21,10 +21,14 @@ export enum PlanType {
 }
 
 export interface PlanBenefits {
-  consultations: boolean;
-  emergencyCoverage: boolean;
-  dental: boolean;
-  optometry?: boolean;
+  telemedicine: boolean;
+  medicationDelivery: boolean;
+  ambulanceTransfer: boolean;
+  homeCare: boolean;
+  workplaceCare: boolean;
+  emergencyRoom: boolean;
+  specializedConsultations: boolean;
+  labTests: boolean;
   notes?: string;
 }
 
@@ -67,7 +71,7 @@ export class Plan {
   status: PlanStatus;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
-  monthlyCost: number;
+  monthlyCost: string;
 
   /* =====================
      Auditoría

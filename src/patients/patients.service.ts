@@ -3,6 +3,7 @@ import { CreatePatientDto } from './dto/create-patient.dto';
 import { UpdatePatientDto } from './dto/update-patient.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Patient, PatientStatus } from './entities/patient.entity';
+import { Company } from '../companies/entities/company.entity';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import { QueryPatientsDto } from './dto/query-patients.dto';
 
@@ -11,10 +12,27 @@ export class PatientsService {
   constructor(
     @InjectRepository(Patient)
     private readonly patientRepository: Repository<Patient>,
+    @InjectRepository(Company)
+    private readonly companyRepository: Repository<Company>,
   ) {}
 
   async create(createPatientDto: CreatePatientDto): Promise<Patient> {
     const patient = this.patientRepository.create(createPatientDto);
+
+    if (createPatientDto.companyId) {
+      const company = await this.companyRepository.findOne({
+        where: { id: createPatientDto.companyId },
+      });
+
+      if (!company) {
+        throw new NotFoundException(
+          `Company with ID ${createPatientDto.companyId} not found`,
+        );
+      }
+
+      patient.company = company;
+    }
+
     return this.patientRepository.save(patient);
   }
 
@@ -145,8 +163,6 @@ export class PatientsService {
     queryBuilder: SelectQueryBuilder<Patient>,
     filters: Partial<QueryPatientsDto>,
   ): void {
-    console.log(filters);
-
     if (filters.fullName) {
       const fullName = filters.fullName.trim().toLowerCase();
 

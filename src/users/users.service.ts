@@ -167,8 +167,6 @@ export class UsersService {
     queryBuilder: SelectQueryBuilder<User>,
     filters: Partial<QueryUserDto>,
   ): void {
-    console.log(filters);
-
     if (filters.fullName) {
       const fullName = filters.fullName.trim().toLowerCase();
 

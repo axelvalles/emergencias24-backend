@@ -68,4 +68,8 @@ export class CreatePatientDto {
   @IsOptional()
   @IsString()
   medicalConditions?: string;
+
+  @IsOptional()
+  @IsString()
+  companyId?: string;
 }

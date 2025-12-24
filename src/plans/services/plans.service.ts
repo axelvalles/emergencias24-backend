@@ -68,7 +68,6 @@ export class PlansService {
   async findOne(id: string): Promise<Plan> {
     const plan = await this.planRepository.findOne({
       where: { id },
-      relations: ['contracts'],
     });
 
     if (!plan) {

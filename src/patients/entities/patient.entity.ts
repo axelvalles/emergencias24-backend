@@ -4,10 +4,13 @@ import {
   CreateDateColumn,
   BeforeInsert,
   OneToMany,
+  ManyToOne,
   PrimaryColumn,
+  JoinColumn,
 } from 'typeorm';
 import { uuidv7 } from 'uuidv7';
 import { PlanSubscription } from '../../plans/entities/plan-subscription.entity';
+import { Company } from '../../companies/entities/company.entity';
 import { Expose } from 'class-transformer';
 
 export enum Gender {
@@ -124,6 +127,13 @@ export class Patient {
   updatedAt: Date;
 
   // --- Relationships ---
+  @ManyToOne(() => Company, (company) => company.patients, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'company_id' })
+  company: Company;
+
   @OneToMany(() => PlanSubscription, (subscription) => subscription.patient)
   subscriptions: PlanSubscription[];
 
