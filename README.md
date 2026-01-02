@@ -8,6 +8,12 @@
   <img src="https://img.shields.io/badge/Twilio-000000?style=for-the-badge&logo=twilio&logoColor=white" alt="Twilio" />
 </p>
 
+## 🎥 Demo del Bot
+
+<p align="center">
+  <img src="DemoBotSiame.gif" alt="Demo Bot Siame" width="600" />
+</p>
+
 ## 📋 Descripción del Proyecto
 
 SIAME es un sistema integral de gestión para clínicas de salud que combina una API REST robusta con un bot de WhatsApp inteligente. El sistema permite gestionar pacientes, planes de salud, suscripciones, registros clínicos y facilita la comunicación automatizada con los usuarios a través de WhatsApp.
@@ -122,6 +128,7 @@ $ npm run test:cov
 ## 📡 API Endpoints
 
 ### Pacientes
+
 - `GET /patients` - Listar pacientes
 - `POST /patients` - Crear paciente
 - `GET /patients/:id` - Obtener paciente
@@ -129,6 +136,7 @@ $ npm run test:cov
 - `DELETE /patients/:id` - Eliminar paciente
 
 ### Planes
+
 - `GET /plans` - Listar planes
 - `POST /plans` - Crear plan
 - `GET /plans/:id` - Obtener plan
@@ -136,6 +144,7 @@ $ npm run test:cov
 - `DELETE /plans/:id` - Eliminar plan
 
 ### Suscripciones
+
 - `GET /subscriptions` - Listar suscripciones
 - `POST /subscriptions` - Crear suscripción
 - `GET /subscriptions/:id` - Obtener suscripción
@@ -143,6 +152,7 @@ $ npm run test:cov
 - `DELETE /subscriptions/:id` - Eliminar suscripción
 
 ### Registros Clínicos
+
 - `GET /clinical-records` - Listar registros
 - `POST /clinical-records` - Crear registro
 - `GET /clinical-records/:id` - Obtener registro
@@ -150,6 +160,7 @@ $ npm run test:cov
 - `DELETE /clinical-records/:id` - Eliminar registro
 
 ### Doctores
+
 - `GET /doctors` - Listar doctores
 - `POST /doctors` - Crear doctor
 - `GET /doctors/:id` - Obtener doctor
@@ -157,6 +168,7 @@ $ npm run test:cov
 - `DELETE /doctors/:id` - Eliminar doctor
 
 ### Especialidades
+
 - `GET /specialties` - Listar especialidades
 - `POST /specialties` - Crear especialidad
 - `GET /specialties/:id` - Obtener especialidad
@@ -174,42 +186,49 @@ $ npm run test:cov
 5. **Farmacia**: Contacto directo con farmacia
 
 ### Comandos Globales
+
 - `menu` - Volver al menú principal
 - `ayuda` - Mostrar ayuda
 
 ## 🗄️ Modelo de Datos
 
 ### Patient (Paciente)
+
 - Información personal completa
 - Datos de contacto de emergencia
 - Información médica básica (tipo de sangre, alergias, condiciones)
 - Estado del paciente
 
 ### Plan (Plan de Salud)
+
 - Planes privados y corporativos
 - Información de costos y coberturas
 - Fechas de vigencia
 - Detalles de beneficios
 
 ### Subscription (Suscripción)
+
 - Vinculación paciente-plan
 - Información de pagos
 - Fechas de vigencia
 - Renovación automática
 
 ### ClinicalRecord (Registro Clínico)
+
 - Historial médico detallado
 - Signos vitales
 - Tratamientos y medicamentos
 - Resultados de laboratorio
 
 ### Doctor (Médico)
+
 - Información profesional
 - Especialidad médica
 - Horarios de consulta
 - Tarifas de consulta
 
 ### Specialty (Especialidad)
+
 - Catálogo de especialidades médicas
 - Descripción de cada especialidad
 
@@ -248,35 +267,6 @@ $ npm run build
 # Ejecutar en producción
 $ npm run start:prod
 ```
-
-## 🤝 Contribución
-
-1. Fork el proyecto
-2. Crear rama de feature (`git checkout -b feature/AmazingFeature`)
-3. Commit cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abrir Pull Request
-
-## 📝 Licencia
-
-Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para más detalles.
-
-## 👥 Soporte
-
-Para soporte técnico o preguntas:
-- Crear issue en GitHub
-- Contactar al equipo de desarrollo
-
-## 🎯 Roadmap
-
-- [ ] Autenticación y autorización JWT
-- [ ] Panel de administración web
-- [ ] Integración con sistemas de facturación
-- [ ] API de pagos en línea
-- [ ] Aplicación móvil para pacientes
-- [ ] Sistema de notificaciones push
-- [ ] Reportes y analytics
-- [ ] Integración con HIS (Hospital Information Systems)
 
 ---
 
