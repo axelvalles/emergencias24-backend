@@ -30,19 +30,6 @@ SIAME es un sistema integral de gestión para clínicas de salud que combina una
 
 ## 🏗️ Arquitectura del Sistema
 
-### Entidades Principales
-
-```mermaid
-graph TD
-    A[Patient] --> B[Subscription]
-    B --> C[Plan]
-    C --> D[PrivatePlan]
-    C --> E[CorporatePlan]
-    A --> F[ClinicalRecord]
-    F --> G[Doctor]
-    G --> H[Specialty]
-```
-
 ### Módulos del Sistema
 
 - **Bot**: Manejo de conversaciones de WhatsApp con máquina de estados
