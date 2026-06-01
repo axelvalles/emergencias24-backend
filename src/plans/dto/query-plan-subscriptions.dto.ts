@@ -1,6 +1,7 @@
 import {
   IsArray,
   IsEnum,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -13,6 +14,10 @@ import {
 } from '../entities/plan-subscription.entity';
 
 export class QueryPlanSubscriptionsDto {
+  @IsOptional()
+  @IsString()
+  q?: string = '';
+
   @IsOptional()
   @IsString()
   patientId?: string;
@@ -49,6 +54,14 @@ export class QueryPlanSubscriptionsDto {
 
   @IsOptional()
   @IsString()
+  @IsIn([
+    'status',
+    'payerType',
+    'startDate',
+    'endDate',
+    'createdAt',
+    'updatedAt',
+  ])
   sortBy?: string = 'createdAt';
 
   @IsOptional()

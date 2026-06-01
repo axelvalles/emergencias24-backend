@@ -1,4 +1,5 @@
 import {
+  IsIn,
   IsOptional,
   IsString,
   IsInt,
@@ -12,6 +13,10 @@ import { PatientStatus } from '../entities/patient.entity';
 export class QueryPatientsDto {
   @IsOptional()
   @IsString()
+  q?: string = '';
+
+  @IsOptional()
+  @IsString()
   fullName?: string = '';
 
   @IsOptional()
@@ -21,7 +26,7 @@ export class QueryPatientsDto {
   @IsOptional()
   @IsArray()
   @IsEnum(PatientStatus, { each: true })
-  status?: PatientStatus;
+  status?: PatientStatus[];
 
   @IsOptional()
   @Type(() => Number)
@@ -36,10 +41,18 @@ export class QueryPatientsDto {
   limit?: number = 10;
 
   @IsOptional()
-  @IsString()
+  @IsIn([
+    'createdAt',
+    'updatedAt',
+    'firstName',
+    'lastName',
+    'documentNumber',
+    'status',
+    'fullName',
+  ])
   sortBy?: string = 'createdAt';
 
   @IsOptional()
-  @IsString()
+  @IsIn(['ASC', 'DESC'])
   sortOrder?: 'ASC' | 'DESC' = 'DESC';
 }

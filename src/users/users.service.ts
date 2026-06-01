@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import { User, UserStatus } from './entities/user.entity';
@@ -6,7 +6,19 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { QueryUserDto } from './dto/query-user.dto';
 import { SearchUserDto } from './dto/search-user.dto';
+import { applyGlobalSearch } from '../common/query/apply-global-search';
 import * as bcrypt from 'bcrypt';
+
+const USER_SORT_COLUMN_MAP: Record<string, string[]> = {
+  createdAt: ['user.createdAt'],
+  updatedAt: ['user.updatedAt'],
+  firstName: ['user.firstName'],
+  lastName: ['user.lastName'],
+  email: ['user.email'],
+  role: ['user.role'],
+  status: ['user.status'],
+  fullName: ['user.firstName', 'user.lastName'],
+};
 
 @Injectable()
 export class UsersService {
@@ -167,6 +179,18 @@ export class UsersService {
     queryBuilder: SelectQueryBuilder<User>,
     filters: Partial<QueryUserDto>,
   ): void {
+    applyGlobalSearch(queryBuilder, {
+      query: filters.q,
+      expressions: [
+        'user.firstName',
+        'user.lastName',
+        "CONCAT(user.firstName, ' ', user.lastName)",
+        'user.email',
+        'user.phone',
+      ],
+      paramName: 'userSearch',
+    });
+
     if (filters.fullName) {
       const fullName = filters.fullName.trim().toLowerCase();
 
@@ -226,16 +250,17 @@ export class UsersService {
     sortBy: string,
     sortOrder: 'ASC' | 'DESC',
   ) {
-    const direction = sortOrder;
+    const safeSortBy = sortBy || 'createdAt';
+    const sortColumns = USER_SORT_COLUMN_MAP[safeSortBy];
 
-    switch (sortBy) {
-      case 'fullName':
-        qb.addOrderBy('user.firstName', direction);
-        qb.addOrderBy('user.lastName', direction);
-        break;
+    if (!sortColumns) {
+      throw new BadRequestException(
+        `Invalid sortBy value. Allowed values: ${Object.keys(USER_SORT_COLUMN_MAP).join(', ')}`,
+      );
+    }
 
-      default:
-        qb.addOrderBy(`user.${sortBy}`, direction);
+    for (const sortColumn of sortColumns) {
+      qb.addOrderBy(sortColumn, sortOrder);
     }
   }
 }

@@ -17,5 +17,5 @@ export interface TwilioIncomingMessage {
   ApiVersion?: string;
   Latitude?: string;
   Longitude?: string;
-  [key: string]: any; // <-- permite campos nuevos sin romper el tipado
+  [key: string]: unknown;
 }

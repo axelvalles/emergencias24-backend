@@ -1,4 +1,5 @@
 import {
+  IsIn,
   IsOptional,
   IsString,
   IsInt,
@@ -10,6 +11,10 @@ import { Type } from 'class-transformer';
 import { UserRole, UserStatus } from '../entities/user.entity';
 
 export class QueryUserDto {
+  @IsOptional()
+  @IsString()
+  q?: string = '';
+
   @IsOptional()
   @IsString()
   fullName?: string = '';
@@ -30,7 +35,7 @@ export class QueryUserDto {
   @IsOptional()
   @IsArray()
   @IsEnum(UserStatus, { each: true })
-  status?: UserStatus;
+  status?: UserStatus[];
 
   @IsOptional()
   @Type(() => Number)
@@ -45,10 +50,19 @@ export class QueryUserDto {
   limit?: number = 10;
 
   @IsOptional()
-  @IsString()
+  @IsIn([
+    'createdAt',
+    'updatedAt',
+    'firstName',
+    'lastName',
+    'email',
+    'role',
+    'status',
+    'fullName',
+  ])
   sortBy?: string = 'createdAt';
 
   @IsOptional()
-  @IsString()
+  @IsIn(['ASC', 'DESC'])
   sortOrder?: 'ASC' | 'DESC' = 'DESC';
 }

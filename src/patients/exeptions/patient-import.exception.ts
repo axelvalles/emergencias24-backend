@@ -19,7 +19,7 @@ export class PatientImportException extends HttpException {
   constructor(
     message: string,
     public readonly errorCode: PatientImportErrorCode,
-    public readonly meta?: Record<string, any>,
+    public readonly meta?: Record<string, unknown>,
     status: HttpStatus = HttpStatus.BAD_REQUEST,
   ) {
     super(

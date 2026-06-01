@@ -70,6 +70,13 @@ export class User {
   @Column({ type: 'timestamp', nullable: true })
   lastLogin: Date;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  @Exclude()
+  passwordResetToken?: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  passwordResetExpiresAt?: Date | null;
+
   // --- Calculated ---
   @Expose()
   get fullName() {

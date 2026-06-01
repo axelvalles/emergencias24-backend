@@ -17,13 +17,13 @@ export abstract class BaseHandler {
     services: Services,
     messagingResponse: MessagingInput,
     message: string,
-    currentState: string,
+    currentState: BotStates,
   ): Promise<Response> {
     await services.messaging.sendMessage(messagingResponse.from, message);
     return {
-      nextState: currentState as any,
+      nextState: currentState,
       lastInteraction: this.now(),
-      currentState: currentState as any,
+      currentState,
     };
   }
 

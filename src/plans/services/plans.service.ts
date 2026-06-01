@@ -1,16 +1,27 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import { Plan, PlanStatus } from '../entities/plan.entity';
+import {
+  PlanSubscription,
+  PlanSubscriptionStatus,
+} from '../entities/plan-subscription.entity';
 import { CreatePlanDto } from '../dto/create-plan.dto';
 import { UpdatePlanDto } from '../dto/update-plan.dto';
 import { QueryPlansDto } from '../dto/query-plans.dto';
+import { applyGlobalSearch } from '../../common/query/apply-global-search';
 
 @Injectable()
 export class PlansService {
   constructor(
     @InjectRepository(Plan)
     private readonly planRepository: Repository<Plan>,
+    @InjectRepository(PlanSubscription)
+    private readonly planSubscriptionRepository: Repository<PlanSubscription>,
   ) {}
 
   async create(createPlanDto: CreatePlanDto): Promise<Plan> {
@@ -38,9 +49,21 @@ export class PlansService {
 
     const currentPage = Math.max(1, page);
     const sanitizedLimit = Math.min(Math.max(1, limit), 100);
-    const filters = rawFilters as PlanFilters;
+    const filters = rawFilters;
 
     const queryBuilder = this.planRepository.createQueryBuilder('plan');
+    queryBuilder.loadRelationCountAndMap(
+      'plan.activeSubscriptionsCount',
+      'plan.subscriptions',
+      'subscription',
+      (qb) =>
+        qb.andWhere('subscription.status IN (:...activeStatuses)', {
+          activeStatuses: [
+            PlanSubscriptionStatus.ACTIVE,
+            PlanSubscriptionStatus.SUSPENDED,
+          ],
+        }),
+    );
 
     this.applyFilters(queryBuilder, filters);
     this.applySorting(queryBuilder, sortBy, sortOrder);
@@ -65,10 +88,39 @@ export class PlansService {
     });
   }
 
-  async findOne(id: string): Promise<Plan> {
-    const plan = await this.planRepository.findOne({
-      where: { id },
+  async findAllActivePaginated(page: number, limit: number) {
+    const skip = (page - 1) * limit;
+    const [data, total] = await this.planRepository.findAndCount({
+      where: { status: PlanStatus.ACTIVE },
+      skip,
+      take: limit,
     });
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async findOne(id: string): Promise<Plan> {
+    const plan = await this.planRepository
+      .createQueryBuilder('plan')
+      .where('plan.id = :id', { id })
+      .loadRelationCountAndMap(
+        'plan.activeSubscriptionsCount',
+        'plan.subscriptions',
+        'subscription',
+        (qb) =>
+          qb.andWhere('subscription.status IN (:...activeStatuses)', {
+            activeStatuses: [
+              PlanSubscriptionStatus.ACTIVE,
+              PlanSubscriptionStatus.SUSPENDED,
+            ],
+          }),
+      )
+      .getOne();
 
     if (!plan) {
       throw new NotFoundException(`Plan with ID ${id} not found`);
@@ -88,6 +140,23 @@ export class PlansService {
 
   async remove(id: string): Promise<void> {
     const plan = await this.findOne(id);
+
+    const activeOrSuspendedSubscriptions = await this.planSubscriptionRepository
+      .createQueryBuilder('subscription')
+      .where('subscription.plan_id = :planId', { planId: id })
+      .andWhere('subscription.status IN (:...statuses)', {
+        statuses: [
+          PlanSubscriptionStatus.ACTIVE,
+          PlanSubscriptionStatus.SUSPENDED,
+        ],
+      })
+      .getCount();
+
+    if (activeOrSuspendedSubscriptions > 0) {
+      throw new BadRequestException(
+        'No se puede eliminar el plan porque tiene suscripciones activas o suspendidas asociadas',
+      );
+    }
 
     await this.planRepository.remove(plan);
   }
@@ -110,6 +179,12 @@ export class PlansService {
     queryBuilder: SelectQueryBuilder<Plan>,
     filters: PlanFilters,
   ) {
+    applyGlobalSearch(queryBuilder, {
+      query: filters.q,
+      expressions: ['plan.name', 'plan.description'],
+      paramName: 'planSearch',
+    });
+
     if (filters.name) {
       const name = filters.name.trim().toLowerCase();
 

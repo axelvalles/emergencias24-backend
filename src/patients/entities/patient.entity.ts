@@ -132,7 +132,7 @@ export class Patient {
     onDelete: 'SET NULL',
   })
   @JoinColumn({ name: 'company_id' })
-  company: Company;
+  company?: Company | null;
 
   @OneToMany(() => PlanSubscription, (subscription) => subscription.patient)
   subscriptions: PlanSubscription[];

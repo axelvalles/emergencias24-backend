@@ -14,7 +14,7 @@ export class FamilyMemberAssignmentException extends HttpException {
   constructor(
     message: string,
     public readonly errorCode: FamilyMemberAssignmentErrorCode,
-    public readonly meta?: Record<string, any>,
+    public readonly meta?: Record<string, unknown>,
     status: HttpStatus = HttpStatus.BAD_REQUEST,
   ) {
     super(

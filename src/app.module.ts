@@ -16,27 +16,29 @@ import { CompaniesModule } from './companies/companies.module';
 import { twilioConfig } from './config/twilio.config';
 import { dbConfig, typeOrmFactory } from './config/db.config';
 import { envSchema } from './config/configuration';
-import { LoggerModule } from 'nestjs-pino';
+// import { LoggerModule } from 'nestjs-pino';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
-const isDevelopment = process.env.NODE_ENV !== 'production';
+// const isDevelopment = process.env.NODE_ENV !== 'production';
 
-const pinoConfig = {
-  pinoHttp: {
-    transport: isDevelopment
-      ? {
-          target: 'pino-pretty',
-          options: {
-            singleLine: true,
-            colorize: true,
-          },
-        }
-      : undefined,
-  },
-};
+// const pinoConfig = {
+//   pinoHttp: {
+//     transport: isDevelopment
+//       ? {
+//           target: 'pino-pretty',
+//           options: {
+//             singleLine: true,
+//             colorize: true,
+//           },
+//         }
+//       : undefined,
+//   },
+// };
 
 @Module({
   imports: [
-    LoggerModule.forRoot(pinoConfig),
+    // LoggerModule.forRoot(pinoConfig),
     ConfigModule.forRoot({
       isGlobal: true,
       load: [twilioConfig, dbConfig, redisConfig],
@@ -62,6 +64,30 @@ const pinoConfig = {
       useFactory: typeOrmFactory,
       inject: [ConfigService],
     }),
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        throttlers: [
+          {
+            name: 'auth',
+            ttl:
+              configService.get<number>('AUTH_LOGIN_THROTTLE_TTL', 60) * 1000,
+            limit: configService.get<number>('AUTH_LOGIN_THROTTLE_LIMIT', 5),
+          },
+          {
+            name: 'api',
+            ttl: configService.get<number>('API_THROTTLE_TTL', 60) * 1000,
+            limit: configService.get<number>('API_THROTTLE_LIMIT', 100),
+          },
+          {
+            name: 'bulk',
+            ttl: configService.get<number>('BULK_THROTTLE_TTL', 60) * 1000,
+            limit: configService.get<number>('BULK_THROTTLE_LIMIT', 5),
+          },
+        ],
+      }),
+    }),
     MessagingModule,
     TicketsModule,
     PlansModule,
@@ -72,6 +98,12 @@ const pinoConfig = {
     AuthModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

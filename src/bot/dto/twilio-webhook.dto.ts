@@ -1,57 +1,106 @@
-import { IsString, IsEnum, IsOptional, IsJSON } from 'class-validator';
+import { IsIn, IsOptional, IsString } from 'class-validator';
 
 export class TwilioIncomingMessageDto {
   @IsString()
-  SmsMessageSid: string;
+  SmsMessageSid!: string;
 
+  @IsOptional()
   @IsString()
-  NumMedia: string;
+  NumMedia?: string;
 
+  @IsOptional()
   @IsString()
-  ProfileName: string;
+  ProfileName?: string;
 
-  @IsEnum(['text', 'image', 'video', 'audio', 'document'], {
+  @IsOptional()
+  @IsIn(['text', 'interactive'], {
     message: 'MessageType must be a valid Twilio message type',
   })
-  @IsOptional()
-  MessageType?: string;
+  MessageType?: 'text' | 'interactive';
 
   @IsString()
-  SmsSid: string;
+  SmsSid!: string;
 
   @IsString()
-  WaId: string;
+  WaId!: string;
 
-  @IsEnum(['received', 'sent', 'failed'], {
-    message: 'SmsStatus must be a valid Twilio SMS status',
-  })
   @IsOptional()
   SmsStatus?: string;
 
+  @IsOptional()
   @IsString()
-  Body: string;
+  Body?: string;
 
   @IsString()
-  To: string;
+  To!: string;
+
+  @IsOptional()
+  @IsString()
+  NumSegments?: string;
+
+  @IsOptional()
+  @IsString()
+  ReferralNumMedia?: string;
 
   @IsString()
-  NumSegments: string;
+  MessageSid!: string;
 
   @IsString()
-  ReferralNumMedia: string;
+  AccountSid!: string;
+
+  @IsOptional()
+  @IsString()
+  ChannelMetadata?: string;
 
   @IsString()
-  MessageSid: string;
+  From!: string;
 
+  @IsOptional()
   @IsString()
-  AccountSid: string;
+  ApiVersion?: string;
 
-  @IsJSON()
-  ChannelMetadata: string; // Se envía como string JSON
-
+  @IsOptional()
   @IsString()
-  From: string;
+  Latitude?: string;
 
+  @IsOptional()
   @IsString()
-  ApiVersion: string;
+  Longitude?: string;
+}
+
+export class TwilioStatusCallbackDto {
+  @IsString()
+  MessageSid!: string;
+
+  @IsOptional()
+  @IsString()
+  SmsSid?: string;
+
+  @IsOptional()
+  @IsString()
+  MessageStatus?: string;
+
+  @IsOptional()
+  @IsString()
+  SmsStatus?: string;
+
+  @IsOptional()
+  @IsString()
+  ErrorCode?: string;
+
+  @IsOptional()
+  @IsString()
+  ErrorMessage?: string;
+
+  @IsOptional()
+  @IsString()
+  To?: string;
+
+  @IsOptional()
+  @IsString()
+  From?: string;
+
+  @IsOptional()
+  @IsString()
+  AccountSid?: string;
 }

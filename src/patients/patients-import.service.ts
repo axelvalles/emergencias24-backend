@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { BadRequestException, Injectable } from '@nestjs/common';
 import * as ExcelJS from 'exceljs';
 import { Response } from 'express';
@@ -14,7 +13,8 @@ import {
 import { PatientImportErrorCode } from './exeptions/patient-import.exception';
 import { DocumentType, Gender, Patient } from './entities/patient.entity';
 import { DataSource, EntityManager } from 'typeorm';
-import { PlanType } from 'src/plans/entities/plan.entity';
+import { Plan, PlanType } from 'src/plans/entities/plan.entity';
+import { Company } from 'src/companies/entities/company.entity';
 
 const DOCUMENT_TYPE_MAP = {
   [DocumentType.CC]: 'CC',
@@ -39,6 +39,8 @@ const GENDER_REVERSE_MAP: Record<string, Gender> = {
   Masculino: Gender.MALE,
   Femenino: Gender.FEMALE,
 };
+
+const BATCH_SIZE = 100;
 
 @Injectable()
 export class PatientsImportService {
@@ -102,8 +104,18 @@ export class PatientsImportService {
       { header: 'Tipo', key: 'planType', width: 20 },
     ];
 
-    const plans = await this.plansService.findAllActive();
-    plans.forEach((plan) => plansSheet.addRow(plan));
+    // Paginated loading for plans to prevent OOM
+    let plansPage = 1;
+    let hasMorePlans = true;
+    while (hasMorePlans) {
+      const plansChunk = await this.plansService.findAllActivePaginated(
+        plansPage,
+        BATCH_SIZE,
+      );
+      plansChunk.data.forEach((plan) => plansSheet.addRow(plan));
+      hasMorePlans = plansChunk.data.length === BATCH_SIZE;
+      plansPage++;
+    }
 
     /* ======================
        Companies sheet
@@ -114,8 +126,18 @@ export class PatientsImportService {
       { header: 'Nombre', key: 'name', width: 30 },
     ];
 
-    const companies = await this.companiesService.findAll();
-    companies.forEach((company) => companiesSheet.addRow(company));
+    // Paginated loading for companies to prevent OOM
+    let companiesPage = 1;
+    let hasMoreCompanies = true;
+    while (hasMoreCompanies) {
+      const companiesChunk = await this.companiesService.findAllPaginated(
+        companiesPage,
+        BATCH_SIZE,
+      );
+      companiesChunk.data.forEach((company) => companiesSheet.addRow(company));
+      hasMoreCompanies = companiesChunk.data.length === BATCH_SIZE;
+      companiesPage++;
+    }
 
     /* ======================
        Metadata sheet
@@ -212,8 +234,10 @@ export class PatientsImportService {
     }
 
     const workbook = new ExcelJS.Workbook();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-    await workbook.xlsx.load(file.buffer as any);
+    const workbookBuffer = file.buffer as unknown as Parameters<
+      typeof workbook.xlsx.load
+    >[0];
+    await workbook.xlsx.load(workbookBuffer);
 
     const patientsSheet = workbook.getWorksheet('Patients');
     if (!patientsSheet) {
@@ -223,11 +247,37 @@ export class PatientsImportService {
       });
     }
 
-    const plans = await this.plansService.findAllActive();
-    const companies = await this.companiesService.findAll();
+    // Build maps in chunks to prevent OOM
+    const planMap = new Map<string, Plan>();
+    const companyMap = new Map<string, Company>();
 
-    const planMap = new Map(plans.map((p) => [p.name, p]));
-    const companyMap = new Map(companies.map((c) => [c.name, c]));
+    // Load plans in batches
+    let plansPage = 1;
+    let hasMorePlans = true;
+    while (hasMorePlans) {
+      const plansChunk = await this.plansService.findAllActivePaginated(
+        plansPage,
+        BATCH_SIZE,
+      );
+      plansChunk.data.forEach((plan) => planMap.set(plan.name, plan));
+      hasMorePlans = plansChunk.data.length === BATCH_SIZE;
+      plansPage++;
+    }
+
+    // Load companies in batches
+    let companiesPage = 1;
+    let hasMoreCompanies = true;
+    while (hasMoreCompanies) {
+      const companiesChunk = await this.companiesService.findAllPaginated(
+        companiesPage,
+        BATCH_SIZE,
+      );
+      companiesChunk.data.forEach((company) =>
+        companyMap.set(company.name, company),
+      );
+      hasMoreCompanies = companiesChunk.data.length === BATCH_SIZE;
+      companiesPage++;
+    }
 
     const errors: {
       row: number;
@@ -237,178 +287,184 @@ export class PatientsImportService {
 
     let imported = 0;
 
+    // Process in chunks for transaction batching
+    const rowNumbers: number[] = [];
     for (let rowNumber = 2; rowNumber <= patientsSheet.rowCount; rowNumber++) {
-      const row = patientsSheet.getRow(rowNumber);
+      rowNumbers.push(rowNumber);
+    }
+
+    // Process in batches
+    for (let i = 0; i < rowNumbers.length; i += BATCH_SIZE) {
+      const batchRows = rowNumbers.slice(i, i + BATCH_SIZE);
 
       await this.dataSource.transaction(async (manager) => {
-        try {
-          const patientRepository = manager.getRepository(Patient);
-          const planSubscriptionsRepository =
-            manager.getRepository(PlanSubscription);
+        for (const rowNumber of batchRows) {
+          const row = patientsSheet.getRow(rowNumber);
 
-          const getValue = (col: number): string | undefined => {
-            const v = row.getCell(col).value;
-            if (v === null || v === undefined) return undefined;
-            // eslint-disable-next-line @typescript-eslint/no-base-to-string
-            return v.toString().trim();
-          };
+          try {
+            const patientRepository = manager.getRepository(Patient);
+            const planSubscriptionsRepository =
+              manager.getRepository(PlanSubscription);
 
-          const firstName = getValue(1);
-          const lastName = getValue(2);
-          const documentTypeStr = getValue(3);
-          const documentNumber = getValue(4);
-          const birthDateCell = row.getCell(5).value;
-          const genderStr = getValue(6);
-          const phone = getValue(7);
-          const city = getValue(8);
-          const planName = getValue(9);
-          const companyName = getValue(10);
+            const getValue = (col: number): string | undefined => {
+              const v = row.getCell(col).value;
+              if (v === null || v === undefined) return undefined;
+              // eslint-disable-next-line @typescript-eslint/no-base-to-string
+              return v.toString().trim();
+            };
 
-          if (
-            !firstName ||
-            !lastName ||
-            !documentTypeStr ||
-            !documentNumber ||
-            !genderStr
-          ) {
-            // errors.push({
-            //   row: rowNumber,
-            //   code: PatientImportErrorCode.REQUIRED_FIELDS_MISSING,
-            //   message: 'Campos requeridos faltantes',
-            // });
-            return;
-          }
+            const firstName = getValue(1);
+            const lastName = getValue(2);
+            const documentTypeStr = getValue(3);
+            const documentNumber = getValue(4);
+            const birthDateCell = row.getCell(5).value;
+            const genderStr = getValue(6);
+            const phone = getValue(7);
+            const city = getValue(8);
+            const planName = getValue(9);
+            const companyName = getValue(10);
 
-          const documentType = DOCUMENT_TYPE_REVERSE_MAP[documentTypeStr];
+            if (
+              !firstName ||
+              !lastName ||
+              !documentTypeStr ||
+              !documentNumber ||
+              !genderStr
+            ) {
+              return;
+            }
 
-          if (!documentType) {
-            errors.push({
-              row: rowNumber,
-              code: PatientImportErrorCode.INVALID_DOCUMENT_TYPE,
-              message: 'Tipo de documento inválido',
-            });
-            return;
-          }
+            const documentType = DOCUMENT_TYPE_REVERSE_MAP[documentTypeStr];
 
-          const gender = GENDER_REVERSE_MAP[genderStr];
-
-          if (!gender) {
-            errors.push({
-              row: rowNumber,
-              code: PatientImportErrorCode.INVALID_GENDER,
-              message: 'Género inválido',
-            });
-            return;
-          }
-
-          let birthDate: Date | undefined;
-          if (birthDateCell) {
-            const parsed =
-              birthDateCell instanceof Date
-                ? birthDateCell
-                : // eslint-disable-next-line @typescript-eslint/no-base-to-string
-                  new Date(birthDateCell.toString());
-
-            if (isNaN(parsed.getTime())) {
+            if (!documentType) {
               errors.push({
                 row: rowNumber,
-                code: PatientImportErrorCode.INVALID_BIRTH_DATE,
-                message: 'Fecha de nacimiento inválida',
+                code: PatientImportErrorCode.INVALID_DOCUMENT_TYPE,
+                message: 'Tipo de documento inválido',
               });
               return;
             }
-            birthDate = parsed;
-          }
 
-          const existing = await patientRepository.findOne({
-            where: { documentNumber },
-          });
+            const gender = GENDER_REVERSE_MAP[genderStr];
 
-          if (existing) {
-            errors.push({
-              row: rowNumber,
-              code: PatientImportErrorCode.PATIENT_ALREADY_EXISTS,
-              message: 'El paciente ya existe',
-            });
-            return;
-          }
-
-          const patient = patientRepository.create({
-            firstName,
-            lastName,
-            documentType,
-            documentNumber,
-            gender,
-            phone,
-            city,
-            birthDate,
-          });
-
-          await patientRepository.save(patient);
-
-          if (planName) {
-            const plan = planMap.get(planName);
-
-            if (!plan) {
+            if (!gender) {
               errors.push({
                 row: rowNumber,
-                code: PatientImportErrorCode.PLAN_NOT_FOUND,
-                message: 'Plan no encontrado',
+                code: PatientImportErrorCode.INVALID_GENDER,
+                message: 'Género inválido',
               });
-              throw new Error(); // rollback fila
+              return;
             }
 
-            if (plan.planType === PlanType.FAMILY) {
-              const hasFamilyPlan = await this.hasActiveFamilyPlan(
-                patient.id,
-                manager,
-              );
+            let birthDate: Date | undefined;
+            if (birthDateCell) {
+              const parsed =
+                birthDateCell instanceof Date
+                  ? birthDateCell
+                  : // eslint-disable-next-line @typescript-eslint/no-base-to-string
+                    new Date(birthDateCell.toString());
 
-              if (hasFamilyPlan) {
+              if (isNaN(parsed.getTime())) {
                 errors.push({
                   row: rowNumber,
-                  code: PatientImportErrorCode.MULTIPLE_FAMILY_PLANS,
-                  message: 'El paciente ya tiene un plan familiar activo',
+                  code: PatientImportErrorCode.INVALID_BIRTH_DATE,
+                  message: 'Fecha de nacimiento inválida',
                 });
-                throw new Error();
+                return;
               }
+              birthDate = parsed;
             }
 
-            let companyId: string | null = null;
-
-            if (companyName) {
-              const company = companyMap.get(companyName);
-              if (!company) {
-                errors.push({
-                  row: rowNumber,
-                  code: PatientImportErrorCode.COMPANY_NOT_FOUND,
-                  message: 'Empresa no encontrada',
-                });
-                throw new Error();
-              }
-              companyId = company.id;
-            }
-
-            const planSubscription = planSubscriptionsRepository.create({
-              payerType: PayerType.PATIENT,
-              startDate: new Date(),
+            const existing = await patientRepository.findOne({
+              where: { documentNumber },
             });
 
-            planSubscription.patient = patient;
-
-            planSubscription.plan = plan;
-
-            if (companyId) {
-              const company = await this.companiesService.findOne(companyId);
-              planSubscription.company = company;
+            if (existing) {
+              errors.push({
+                row: rowNumber,
+                code: PatientImportErrorCode.PATIENT_ALREADY_EXISTS,
+                message: 'El paciente ya existe',
+              });
+              return;
             }
 
-            await planSubscriptionsRepository.save(planSubscription);
-          }
+            const patient = patientRepository.create({
+              firstName,
+              lastName,
+              documentType,
+              documentNumber,
+              gender,
+              phone,
+              city,
+              birthDate,
+            });
 
-          imported++;
-        } catch {
-          // rollback automático de la transacción
+            await patientRepository.save(patient);
+
+            if (planName) {
+              const plan = planMap.get(planName);
+
+              if (!plan) {
+                errors.push({
+                  row: rowNumber,
+                  code: PatientImportErrorCode.PLAN_NOT_FOUND,
+                  message: 'Plan no encontrado',
+                });
+                throw new Error(); // rollback fila
+              }
+
+              if (plan.planType === PlanType.FAMILY) {
+                const hasFamilyPlan = await this.hasActiveFamilyPlan(
+                  patient.id,
+                  manager,
+                );
+
+                if (hasFamilyPlan) {
+                  errors.push({
+                    row: rowNumber,
+                    code: PatientImportErrorCode.MULTIPLE_FAMILY_PLANS,
+                    message: 'El paciente ya tiene un plan familiar activo',
+                  });
+                  throw new Error();
+                }
+              }
+
+              let companyId: string | null = null;
+
+              if (companyName) {
+                const company = companyMap.get(companyName);
+                if (!company) {
+                  errors.push({
+                    row: rowNumber,
+                    code: PatientImportErrorCode.COMPANY_NOT_FOUND,
+                    message: 'Empresa no encontrada',
+                  });
+                  throw new Error();
+                }
+                companyId = company.id;
+              }
+
+              const planSubscription = planSubscriptionsRepository.create({
+                payerType: PayerType.PATIENT,
+                startDate: new Date(),
+              });
+
+              planSubscription.patient = patient;
+
+              planSubscription.plan = plan;
+
+              if (companyId) {
+                const company = await this.companiesService.findOne(companyId);
+                planSubscription.company = company;
+              }
+
+              await planSubscriptionsRepository.save(planSubscription);
+            }
+
+            imported++;
+          } catch {
+            // rollback automático de la transacción
+          }
         }
       });
     }

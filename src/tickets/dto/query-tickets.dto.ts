@@ -1,5 +1,6 @@
 import {
   IsEnum,
+  IsIn,
   IsOptional,
   IsString,
   IsDateString,
@@ -11,6 +12,10 @@ import { Type } from 'class-transformer';
 import { ServiceType, TicketStatus, Priority } from '../entities/ticket.entity';
 
 export class QueryTicketsDto {
+  @IsOptional()
+  @IsString()
+  q?: string = '';
+
   @IsOptional()
   @IsArray()
   @IsEnum(ServiceType, { each: true })
@@ -66,10 +71,10 @@ export class QueryTicketsDto {
   limit?: number = 10;
 
   @IsOptional()
-  @IsString()
+  @IsIn(['createdAt', 'updatedAt', 'referenceNumber', 'status', 'priority'])
   sortBy?: string = 'createdAt';
 
   @IsOptional()
-  @IsString()
+  @IsIn(['ASC', 'DESC'])
   sortOrder?: 'ASC' | 'DESC' = 'DESC';
 }

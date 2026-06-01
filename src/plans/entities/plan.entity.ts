@@ -6,8 +6,10 @@ import {
   BeforeInsert,
   PrimaryColumn,
   Index,
+  OneToMany,
 } from 'typeorm';
 import { uuidv7 } from 'uuidv7';
+import { PlanSubscription } from './plan-subscription.entity';
 
 export enum PlanStatus {
   ACTIVE = 'ACTIVE',
@@ -72,6 +74,11 @@ export class Plan {
 
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   monthlyCost: string;
+
+  @OneToMany(() => PlanSubscription, (subscription) => subscription.plan)
+  subscriptions: PlanSubscription[];
+
+  activeSubscriptionsCount?: number;
 
   /* =====================
      Auditoría

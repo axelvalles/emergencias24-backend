@@ -13,6 +13,10 @@ import { PlanStatus, PlanType } from '../entities/plan.entity';
 export class QueryPlansDto {
   @IsOptional()
   @IsString()
+  q?: string = '';
+
+  @IsOptional()
+  @IsString()
   name?: string = '';
 
   @IsOptional()

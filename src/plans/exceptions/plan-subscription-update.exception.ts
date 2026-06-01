@@ -10,6 +10,7 @@ export enum PlanSubscriptionUpdateErrorCode {
   // Reglas de negocio
   PLAN_ALREADY_ASSIGNED = 'PLAN_ALREADY_ASSIGNED',
   PATIENT_ALREADY_HAS_FAMILY_PLAN = 'PATIENT_ALREADY_HAS_FAMILY_PLAN',
+  PATIENT_ALREADY_HAS_PLAN_TYPE = 'PATIENT_ALREADY_HAS_PLAN_TYPE',
 
   // Estados
   INVALID_STATUS_TRANSITION = 'INVALID_STATUS_TRANSITION',
@@ -22,7 +23,7 @@ export class PlanSubscriptionUpdateException extends HttpException {
   constructor(
     message: string,
     public readonly errorCode: PlanSubscriptionUpdateErrorCode,
-    public readonly meta?: Record<string, any>,
+    public readonly meta?: Record<string, unknown>,
     status: HttpStatus = HttpStatus.BAD_REQUEST,
   ) {
     super(

@@ -6,6 +6,8 @@ import { IMessagingProvider } from '../interfaces/messaging.interface';
 import { Logger } from '@nestjs/common';
 import { MetaResponse } from '../interfaces/meta-response';
 
+type MetaPayload = Record<string, unknown>;
+
 @Injectable()
 export class MetaMessagingProvider implements IMessagingProvider {
   private readonly logger = new Logger(MetaMessagingProvider.name);
@@ -61,7 +63,7 @@ export class MetaMessagingProvider implements IMessagingProvider {
     await this.callMetaApi(payload);
   }
 
-  private async callMetaApi(payload: any) {
+  private async callMetaApi(payload: MetaPayload) {
     try {
       const response = await axios.post<MetaResponse>(
         `${this.apiUrl}/${this.phoneNumberId}/messages`,

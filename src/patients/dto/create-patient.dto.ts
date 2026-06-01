@@ -5,7 +5,7 @@ import {
   IsNotEmpty,
   IsEnum,
 } from 'class-validator';
-import { Gender, DocumentType } from '../entities/patient.entity';
+import { Gender, DocumentType, BloodType } from '../entities/patient.entity';
 
 export class CreatePatientDto {
   @IsNotEmpty()
@@ -60,6 +60,10 @@ export class CreatePatientDto {
   @IsOptional()
   @IsString()
   emergencyContactPhone?: string;
+
+  @IsOptional()
+  @IsEnum(BloodType)
+  bloodType?: BloodType;
 
   @IsOptional()
   @IsString()

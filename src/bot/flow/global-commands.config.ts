@@ -3,6 +3,7 @@ import { SessionStoreService } from '../session-store.service';
 import { PatientsService } from 'src/patients/patients.service';
 import { BotStates } from './state-machine.config';
 import { TWILIO_TEMPLATES } from '../state-machine/templates';
+import { Patient } from 'src/patients/entities/patient.entity';
 
 type Services = {
   messaging: MessagingService;
@@ -12,7 +13,7 @@ type Services = {
 
 type Context = {
   from: string;
-  patient: any;
+  patient: Patient | null;
   profileName: string;
 };
 

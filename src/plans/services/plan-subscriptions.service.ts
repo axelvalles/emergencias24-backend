@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Not, Repository, SelectQueryBuilder } from 'typeorm';
+import { In, Repository, SelectQueryBuilder } from 'typeorm';
 import {
   PlanSubscription,
   PlanSubscriptionStatus,
@@ -20,6 +20,7 @@ import {
 } from '../dto/validate-family-member.dto';
 import { Plan, PlanType } from '../entities/plan.entity';
 import { Patient } from '../../patients/entities/patient.entity';
+import { applyGlobalSearch } from '../../common/query/apply-global-search';
 import {
   FamilyMemberAssignmentException,
   FamilyMemberAssignmentErrorCode,
@@ -32,6 +33,7 @@ import {
   PlanSubscriptionUpdateErrorCode,
   PlanSubscriptionUpdateException,
 } from '../exceptions/plan-subscription-update.exception';
+import { Company } from 'src/companies/entities/company.entity';
 
 @Injectable()
 export class PlanSubscriptionsService {
@@ -73,26 +75,25 @@ export class PlanSubscriptionsService {
       );
     }
 
-    // 3. If plan is FAMILY → validate only one family plan allowed
-    if (plan.planType === PlanType.FAMILY) {
-      const existingFamilyPlan = await this.planSubscriptionRepository.findOne({
-        where: {
-          patient: { id: dto.patientId },
-          status: In([
-            PlanSubscriptionStatus.ACTIVE,
-            PlanSubscriptionStatus.SUSPENDED,
-          ]),
-          plan: { planType: PlanType.FAMILY },
-        },
-        relations: ['plan'],
-      });
+    // 3. Validate max one plan per type (ACTIVE/SUSPENDED)
+    const existingPlanType = await this.planSubscriptionRepository.findOne({
+      where: {
+        patient: { id: dto.patientId },
+        status: In([
+          PlanSubscriptionStatus.ACTIVE,
+          PlanSubscriptionStatus.SUSPENDED,
+        ]),
+        plan: { planType: plan.planType },
+      },
+      relations: ['plan'],
+    });
 
-      if (existingFamilyPlan) {
-        throw new PlanSubscriptionCreationException(
-          'Patient already has an active family plan',
-          PlanSubscriptionCreationErrorCode.PATIENT_ALREADY_HAS_FAMILY_PLAN,
-        );
-      }
+    if (existingPlanType) {
+      throw new PlanSubscriptionCreationException(
+        `Patient already has an active or suspended ${plan.planType} plan`,
+        PlanSubscriptionCreationErrorCode.PATIENT_ALREADY_HAS_PLAN_TYPE,
+        { planType: plan.planType },
+      );
     }
 
     // 4. Create subscription
@@ -126,7 +127,7 @@ export class PlanSubscriptionsService {
 
     const currentPage = Math.max(1, page);
     const sanitizedLimit = Math.min(Math.max(1, limit), 100);
-    const filters = rawFilters as PlanSubscriptionFilters;
+    const filters = rawFilters;
 
     const queryBuilder = this.planSubscriptionRepository
       .createQueryBuilder('planSubscription')
@@ -264,7 +265,7 @@ export class PlanSubscriptionsService {
      */
     if (updateDto.companyId !== undefined) {
       subscription.company = updateDto.companyId
-        ? ({ id: updateDto.companyId } as any)
+        ? ({ id: updateDto.companyId } as Company)
         : null;
     }
 
@@ -276,41 +277,48 @@ export class PlanSubscriptionsService {
   private async validateActivationRules(
     subscription: PlanSubscription,
   ): Promise<void> {
-    // Regla: no duplicar el mismo plan
-    const existingPlan = await this.planSubscriptionRepository.findOne({
-      where: {
-        id: Not(subscription.id),
-        patient: { id: subscription.patient.id },
-        plan: { id: subscription.plan.id },
-        status: PlanSubscriptionStatus.ACTIVE,
-      },
-    });
+    // Single query with OR condition to avoid N+1
+    const existingSubscription = await this.planSubscriptionRepository
+      .createQueryBuilder('ps')
+      .innerJoin('ps.plan', 'plan')
+      .where('ps.id != :subscriptionId', { subscriptionId: subscription.id })
+      .andWhere('ps.patientId = :patientId', {
+        patientId: subscription.patient.id,
+      })
+      .andWhere(
+        '(ps.status = :activeStatus AND plan.id = :planId) OR (ps.status IN (:...statuses) AND plan.planType = :planType)',
+        {
+          activeStatus: PlanSubscriptionStatus.ACTIVE,
+          planId: subscription.plan.id,
+          statuses: [
+            PlanSubscriptionStatus.ACTIVE,
+            PlanSubscriptionStatus.SUSPENDED,
+          ],
+          planType: subscription.plan.planType,
+        },
+      )
+      .getOne();
 
-    if (existingPlan) {
+    if (!existingSubscription) {
+      return; // No conflicts found
+    }
+
+    // Determine which rule was violated
+    if (
+      existingSubscription.status === PlanSubscriptionStatus.ACTIVE &&
+      existingSubscription.plan.id === subscription.plan.id
+    ) {
       throw new PlanSubscriptionUpdateException(
         'Patient already has this plan active',
         PlanSubscriptionUpdateErrorCode.PLAN_ALREADY_ASSIGNED,
       );
     }
 
-    // Regla: solo un plan familiar activo
-    if (subscription.plan.planType === PlanType.FAMILY) {
-      const existingFamilyPlan = await this.planSubscriptionRepository.findOne({
-        where: {
-          id: Not(subscription.id),
-          patient: { id: subscription.patient.id },
-          status: PlanSubscriptionStatus.ACTIVE,
-          plan: { planType: PlanType.FAMILY },
-        },
-      });
-
-      if (existingFamilyPlan) {
-        throw new PlanSubscriptionUpdateException(
-          'Patient already has an active family plan',
-          PlanSubscriptionUpdateErrorCode.PATIENT_ALREADY_HAS_FAMILY_PLAN,
-        );
-      }
-    }
+    throw new PlanSubscriptionUpdateException(
+      `Patient already has an active or suspended ${subscription.plan.planType} plan`,
+      PlanSubscriptionUpdateErrorCode.PATIENT_ALREADY_HAS_PLAN_TYPE,
+      { planType: subscription.plan.planType },
+    );
   }
 
   async remove(id: string): Promise<void> {
@@ -558,7 +566,7 @@ export class PlanSubscriptionsService {
       id: sub.id,
       planName: sub.plan.name,
       role: sub.payerPatient ? 'member' : 'head',
-      status: sub.status as string,
+      status: sub.status,
     }));
 
     return {
@@ -579,6 +587,19 @@ export class PlanSubscriptionsService {
     queryBuilder: SelectQueryBuilder<PlanSubscription>,
     filters: PlanSubscriptionFilters,
   ) {
+    applyGlobalSearch(queryBuilder, {
+      query: filters.q,
+      expressions: [
+        'patient.firstName',
+        'patient.lastName',
+        "CONCAT(patient.firstName, ' ', patient.lastName)",
+        'patient.documentNumber',
+        'plan.name',
+        'company.name',
+      ],
+      paramName: 'planSubscriptionSearch',
+    });
+
     if (filters.patientId) {
       queryBuilder.andWhere('patient.id = :patientId', {
         patientId: filters.patientId,

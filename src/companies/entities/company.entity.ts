@@ -58,4 +58,6 @@ export class Company {
 
   @OneToMany(() => Patient, (patient) => patient.company)
   patients: Patient[];
+
+  associatedPatientsCount?: number;
 }

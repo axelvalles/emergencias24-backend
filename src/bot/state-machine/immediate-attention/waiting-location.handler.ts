@@ -49,7 +49,7 @@ export class ImmediateAttentionWaitingLocationHandler extends BaseHandler {
     return {
       nextState: 'START',
       lastInteraction: this.now(),
-      currentState: this.state as any,
+      currentState: this.state,
     };
   }
 }

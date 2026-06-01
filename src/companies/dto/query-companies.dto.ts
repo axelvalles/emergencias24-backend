@@ -1,6 +1,7 @@
 import {
   IsArray,
   IsEnum,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -10,6 +11,10 @@ import { Type } from 'class-transformer';
 import { CompanyStatus } from '../entities/company.entity';
 
 export class QueryCompaniesDto {
+  @IsOptional()
+  @IsString()
+  q?: string = '';
+
   @IsOptional()
   @IsString()
   name?: string = '';
@@ -25,7 +30,7 @@ export class QueryCompaniesDto {
   @IsOptional()
   @IsArray()
   @IsEnum(CompanyStatus, { each: true })
-  status?: CompanyStatus;
+  status?: CompanyStatus[];
 
   @IsOptional()
   @Type(() => Number)
@@ -41,6 +46,7 @@ export class QueryCompaniesDto {
 
   @IsOptional()
   @IsString()
+  @IsIn(['id', 'name', 'taxId', 'contactEmail', 'createdAt', 'updatedAt'])
   sortBy?: string = 'createdAt';
 
   @IsOptional()

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreatePatientDto } from './dto/create-patient.dto';
 import { UpdatePatientDto } from './dto/update-patient.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -6,6 +10,17 @@ import { Patient, PatientStatus } from './entities/patient.entity';
 import { Company } from '../companies/entities/company.entity';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import { QueryPatientsDto } from './dto/query-patients.dto';
+import { applyGlobalSearch } from '../common/query/apply-global-search';
+
+const PATIENT_SORT_COLUMN_MAP: Record<string, string[]> = {
+  createdAt: ['patient.createdAt'],
+  updatedAt: ['patient.updatedAt'],
+  firstName: ['patient.firstName'],
+  lastName: ['patient.lastName'],
+  documentNumber: ['patient.documentNumber'],
+  status: ['patient.status'],
+  fullName: ['patient.firstName', 'patient.lastName'],
+};
 
 @Injectable()
 export class PatientsService {
@@ -77,6 +92,9 @@ export class PatientsService {
   async findOne(id: string): Promise<Patient> {
     const patient = await this.patientRepository.findOne({
       where: { id },
+      relations: {
+        company: true,
+      },
     });
 
     if (!patient) {
@@ -95,6 +113,9 @@ export class PatientsService {
   async findByDocument(documentNumber: string): Promise<Patient | null> {
     const patient = await this.patientRepository.findOne({
       where: { documentNumber },
+      relations: {
+        company: true,
+      },
     });
 
     if (!patient) {
@@ -111,9 +132,27 @@ export class PatientsService {
     updatePatientDto: UpdatePatientDto,
   ): Promise<Patient> {
     const patient = await this.findOne(id);
+    const { companyId, ...patientData } = updatePatientDto;
 
     // Update the patient with the new data
-    Object.assign(patient, updatePatientDto);
+    Object.assign(patient, patientData);
+
+    if (companyId !== undefined) {
+      if (!companyId) {
+        patient.company = null;
+      } else {
+        const company = await this.companyRepository.findOne({
+          where: { id: companyId },
+        });
+
+        if (!company) {
+          throw new NotFoundException(`Company with ID ${companyId} not found`);
+        }
+
+        patient.company = company;
+      }
+    }
+
     patient.updatedAt = new Date();
 
     return this.patientRepository.save(patient);
@@ -163,6 +202,18 @@ export class PatientsService {
     queryBuilder: SelectQueryBuilder<Patient>,
     filters: Partial<QueryPatientsDto>,
   ): void {
+    applyGlobalSearch(queryBuilder, {
+      query: filters.q,
+      expressions: [
+        'patient.firstName',
+        'patient.lastName',
+        "CONCAT(patient.firstName, ' ', patient.lastName)",
+        'patient.documentNumber',
+        'patient.phone',
+      ],
+      paramName: 'patientSearch',
+    });
+
     if (filters.fullName) {
       const fullName = filters.fullName.trim().toLowerCase();
 
@@ -203,16 +254,17 @@ export class PatientsService {
     sortBy: string,
     sortOrder: 'ASC' | 'DESC',
   ) {
-    const direction = sortOrder;
+    const safeSortBy = sortBy || 'createdAt';
+    const sortColumns = PATIENT_SORT_COLUMN_MAP[safeSortBy];
 
-    switch (sortBy) {
-      case 'fullName':
-        qb.addOrderBy('patient.firstName', direction);
-        qb.addOrderBy('patient.lastName', direction);
-        break;
+    if (!sortColumns) {
+      throw new BadRequestException(
+        `Invalid sortBy value. Allowed values: ${Object.keys(PATIENT_SORT_COLUMN_MAP).join(', ')}`,
+      );
+    }
 
-      default:
-        qb.addOrderBy(`patient.${sortBy}`, direction);
+    for (const sortColumn of sortColumns) {
+      qb.addOrderBy(sortColumn, sortOrder);
     }
   }
 }

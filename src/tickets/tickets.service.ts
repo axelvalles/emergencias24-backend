@@ -13,6 +13,15 @@ import { TicketsGateway } from './tickets.gateway';
 import { UsersService } from '../users/users.service';
 import { User } from 'src/users/entities/user.entity';
 import { Patient } from 'src/patients/entities/patient.entity';
+import { applyGlobalSearch } from '../common/query/apply-global-search';
+
+const TICKET_SORT_COLUMN_MAP: Record<string, string> = {
+  createdAt: 'ticket.createdAt',
+  updatedAt: 'ticket.updatedAt',
+  referenceNumber: 'ticket.referenceNumber',
+  status: 'ticket.status',
+  priority: 'ticket.priority',
+};
 
 @Injectable()
 export class TicketsService {
@@ -71,18 +80,19 @@ export class TicketsService {
 
     const queryBuilder = this.ticketRepository.createQueryBuilder('ticket');
 
+    // Incluir relaciones antes de filtrar para habilitar búsqueda global en patient
+    queryBuilder.leftJoinAndSelect('ticket.patient', 'patient');
+
     // Aplicar filtros
     this.applyFilters(queryBuilder, filters);
 
     // Aplicar ordenamiento
-    queryBuilder.orderBy(`ticket.${sortBy}`, sortOrder);
+    const sortColumn = this.getTicketSortColumn(sortBy);
+    queryBuilder.orderBy(sortColumn, sortOrder);
 
     // Aplicar paginación
     const skip = (page - 1) * limit;
     queryBuilder.skip(skip).take(limit);
-
-    // Incluir relaciones
-    queryBuilder.leftJoinAndSelect('ticket.patient', 'patient');
 
     const [data, total] = await queryBuilder.getManyAndCount();
 
@@ -236,6 +246,22 @@ export class TicketsService {
     queryBuilder: SelectQueryBuilder<Ticket>,
     filters: Partial<QueryTicketsDto>,
   ): void {
+    applyGlobalSearch(queryBuilder, {
+      query: filters.q,
+      expressions: [
+        'ticket.requesterName',
+        'ticket.requesterPhone',
+        'ticket.municipality',
+        'ticket.location',
+        'CAST(ticket.referenceNumber AS TEXT)',
+        'patient.firstName',
+        'patient.lastName',
+        "CONCAT(patient.firstName, ' ', patient.lastName)",
+        'patient.documentNumber',
+      ],
+      paramName: 'ticketSearch',
+    });
+
     if (filters.serviceType && filters.serviceType.length > 0) {
       queryBuilder.andWhere('ticket.serviceType IN (:...serviceType)', {
         serviceType: filters.serviceType,
@@ -289,5 +315,21 @@ export class TicketsService {
         createdTo: filters.createdTo,
       });
     }
+  }
+
+  private getTicketSortColumn(sortBy?: string): string {
+    if (!sortBy) {
+      return TICKET_SORT_COLUMN_MAP.createdAt;
+    }
+
+    const sortColumn = TICKET_SORT_COLUMN_MAP[sortBy];
+
+    if (!sortColumn) {
+      throw new BadRequestException(
+        `Invalid sortBy value. Allowed values: ${Object.keys(TICKET_SORT_COLUMN_MAP).join(', ')}`,
+      );
+    }
+
+    return sortColumn;
   }
 }

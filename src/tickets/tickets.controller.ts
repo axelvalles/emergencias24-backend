@@ -17,19 +17,25 @@ import { QueryTicketsDto } from './dto/query-tickets.dto';
 import { CancelTicketDto } from './dto/cancell-ticket.dto';
 import { UpdateNoteTicketDto } from './dto/update-note-ticket.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { RolesGuard } from 'src/auth/guards/roles.guard';
+import { Roles } from 'src/auth/decorators/roles.decorator';
 import { User } from 'src/users/entities/user.entity';
+import { UserRole } from 'src/users/entities/user.entity';
 import { GetUser } from 'src/auth/decorators/get-user.decorator';
 
 @Controller('tickets')
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class TicketsController {
   constructor(private readonly ticketsService: TicketsService) {}
 
   @Post()
+  @Roles(UserRole.ADMIN, UserRole.OPERATOR)
   create(@Body() createTicketDto: CreateTicketDto) {
     return this.ticketsService.create(createTicketDto);
   }
 
   @Get()
+  @Roles(UserRole.ADMIN, UserRole.OPERATOR)
   findAll(
     @Query(
       new ValidationPipe({
@@ -43,17 +49,19 @@ export class TicketsController {
   }
 
   @Get(':id')
+  @Roles(UserRole.ADMIN, UserRole.OPERATOR)
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.ticketsService.findOne(id);
   }
 
   @Get(':id/history')
-  @UseGuards(JwtAuthGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPERATOR)
   getHistory(@Param('id', ParseUUIDPipe) id: string) {
     return this.ticketsService.getHistory(id);
   }
 
   @Get('get-by-reference-number/:referenceNumber')
+  @Roles(UserRole.ADMIN, UserRole.OPERATOR)
   findByReferenceNumber(
     @Param('referenceNumber', ParseIntPipe) referenceNumber: number,
   ) {
@@ -61,7 +69,7 @@ export class TicketsController {
   }
 
   @Patch(':id/assign/:assignedTo')
-  @UseGuards(JwtAuthGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPERATOR)
   assignTicket(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('assignedTo') assignedTo: string,
@@ -71,13 +79,13 @@ export class TicketsController {
   }
 
   @Patch(':id/start')
-  @UseGuards(JwtAuthGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPERATOR)
   startTicket(@Param('id', ParseUUIDPipe) id: string, @GetUser() user: User) {
     return this.ticketsService.startTicket(id, user);
   }
 
   @Patch(':id/complete')
-  @UseGuards(JwtAuthGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPERATOR)
   completeTicket(
     @Param('id', ParseUUIDPipe) id: string,
     @GetUser() user: User,
@@ -86,6 +94,7 @@ export class TicketsController {
   }
 
   @Patch(':id/update-note')
+  @Roles(UserRole.ADMIN, UserRole.OPERATOR)
   updateNote(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() { note }: UpdateNoteTicketDto,
@@ -94,7 +103,7 @@ export class TicketsController {
   }
 
   @Patch(':id/cancel')
-  @UseGuards(JwtAuthGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPERATOR)
   cancelTicket(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() { cancellationReason }: CancelTicketDto,

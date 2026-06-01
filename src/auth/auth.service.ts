@@ -1,10 +1,15 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, IsNull, Not, MoreThan } from 'typeorm';
 import { User, UserStatus } from '../users/entities/user.entity';
 import { LoginDto } from './dto/login.dto';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -63,5 +68,60 @@ export class AuthService {
     return this.userRepository.findOne({
       where: { id: userId, status: UserStatus.ACTIVE },
     });
+  }
+
+  async forgotPassword(email: string): Promise<void> {
+    const user = await this.userRepository.findOne({ where: { email } });
+
+    // Always succeed silently to prevent email enumeration
+    if (!user) {
+      return;
+    }
+
+    // Generate reset token
+    const token = crypto.randomUUID();
+    const tokenHash = await bcrypt.hash(token, 10);
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    user.passwordResetToken = tokenHash;
+    user.passwordResetExpiresAt = expiresAt;
+    await this.userRepository.save(user);
+
+    // TODO: Send email via Zoho SMTP with reset link
+    // For now, log the token in development
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`Password reset token for ${email}: ${token}`);
+    }
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    // Find user with valid reset token
+    const users = await this.userRepository.find({
+      where: {
+        passwordResetToken: Not(IsNull()),
+        passwordResetExpiresAt: MoreThan(new Date()),
+      },
+    });
+
+    let user: User | null = null;
+    for (const u of users) {
+      if (
+        u.passwordResetToken &&
+        (await bcrypt.compare(token, u.passwordResetToken))
+      ) {
+        user = u;
+        break;
+      }
+    }
+
+    if (!user) {
+      throw new BadRequestException('Invalid or expired reset token');
+    }
+
+    // Update password
+    user.passwordHash = await bcrypt.hash(newPassword, 10);
+    user.passwordResetToken = null;
+    user.passwordResetExpiresAt = null;
+    await this.userRepository.save(user);
   }
 }

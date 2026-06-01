@@ -4,18 +4,23 @@ import {
   ArgumentMetadata,
   BadRequestException,
 } from '@nestjs/common';
+import type { ClassConstructor } from 'class-transformer';
 import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
 
 @Injectable()
-export class ValidationPipe implements PipeTransform<any> {
-  async transform(value: any, { metatype }: ArgumentMetadata) {
-    if (!metatype || !this.toValidate(metatype)) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+export class ValidationPipe implements PipeTransform<unknown> {
+  async transform(value: unknown, { metatype }: ArgumentMetadata) {
+    if (
+      !metatype ||
+      !this.toValidate(metatype) ||
+      typeof value !== 'object' ||
+      value === null
+    ) {
       return value;
     }
 
-    const object = plainToInstance(metatype, value);
+    const object = plainToInstance(metatype as ClassConstructor<object>, value);
     const errors = await validate(object);
 
     if (errors.length > 0) {
@@ -27,7 +32,6 @@ export class ValidationPipe implements PipeTransform<any> {
       );
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return value;
   }
 
