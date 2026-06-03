@@ -12,11 +12,8 @@ export class TwilioIncomingMessageDto {
   @IsString()
   ProfileName?: string;
 
-  @IsOptional()
-  @IsIn(['text', 'interactive'], {
-    message: 'MessageType must be a valid Twilio message type',
-  })
-  MessageType?: 'text' | 'interactive';
+  @IsIn(['text', 'interactive', 'location', 'image', 'video', 'audio', 'voice'])
+  MessageType?: string;
 
   @IsString()
   SmsSid!: string;
@@ -66,6 +63,26 @@ export class TwilioIncomingMessageDto {
   @IsOptional()
   @IsString()
   Longitude?: string;
+
+  @IsOptional()
+  @IsString()
+  MediaUrl0?: string;
+
+  @IsOptional()
+  @IsString()
+  MediaContentType0?: string;
+
+  @IsOptional()
+  @IsString()
+  ListId?: string;
+
+  @IsOptional()
+  @IsString()
+  ListTitle?: string;
+
+  @IsOptional()
+  @IsString()
+  OriginalRepliedMessageSid?: string;
 }
 
 export class TwilioStatusCallbackDto {

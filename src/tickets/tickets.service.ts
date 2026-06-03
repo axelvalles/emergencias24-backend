@@ -127,6 +127,7 @@ export class TicketsService {
     id: string,
     assignedTo: string,
     changedBy?: User,
+    comment?: string,
   ): Promise<Ticket> {
     const ticket = await this.findOne(id);
     const user = await this.usersService.findOne(assignedTo);
@@ -145,13 +146,13 @@ export class TicketsService {
       savedTicket,
       TicketStatus.ASSIGNED,
       changedBy,
-      `Asignado a ${user.firstName} ${user.lastName}`,
+      comment,
     );
 
     return savedTicket;
   }
 
-  async startTicket(id: string, user: User): Promise<Ticket> {
+  async startTicket(id: string, user: User, comment?: string): Promise<Ticket> {
     const ticket = await this.findOne(id);
 
     if (ticket.status !== TicketStatus.ASSIGNED) {
@@ -166,13 +167,17 @@ export class TicketsService {
       savedTicket,
       TicketStatus.IN_PROGRESS,
       user,
-      'Ticket iniciado',
+      comment,
     );
 
     return savedTicket;
   }
 
-  async completeTicket(id: string, changedBy?: User): Promise<Ticket> {
+  async completeTicket(
+    id: string,
+    changedBy?: User,
+    comment?: string,
+  ): Promise<Ticket> {
     const ticket = await this.findOne(id);
 
     ticket.status = TicketStatus.COMPLETED;
@@ -180,7 +185,12 @@ export class TicketsService {
 
     const savedTicket = await this.ticketRepository.save(ticket);
 
-    await this.createHistory(savedTicket, TicketStatus.COMPLETED, changedBy);
+    await this.createHistory(
+      savedTicket,
+      TicketStatus.COMPLETED,
+      changedBy,
+      comment,
+    );
 
     return savedTicket;
   }
@@ -197,12 +207,11 @@ export class TicketsService {
 
   async cancelTicket(
     id: string,
-    cancellationReason: string,
     changedBy?: User,
+    comment?: string,
   ): Promise<Ticket> {
     const ticket = await this.findOne(id);
 
-    ticket.cancellationReason = cancellationReason;
     ticket.status = TicketStatus.CANCELLED;
 
     const savedTicket = await this.ticketRepository.save(ticket);
@@ -211,7 +220,7 @@ export class TicketsService {
       savedTicket,
       TicketStatus.CANCELLED,
       changedBy,
-      `Motivo de cancelación: ${cancellationReason}`,
+      comment,
     );
 
     return savedTicket;

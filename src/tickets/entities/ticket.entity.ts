@@ -101,9 +101,6 @@ export class Ticket {
   @Column({ type: 'text', nullable: true })
   note?: string;
 
-  @Column({ type: 'text', nullable: true })
-  cancellationReason?: string;
-
   @ManyToOne(() => User, {
     nullable: true,
     onDelete: 'SET NULL',

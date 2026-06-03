@@ -22,6 +22,9 @@ export class BotService {
     body: string;
     profileName: string;
     location: { latitude: string; longitude: string } | null;
+    mediaUrl: string | null;
+    mediaContentType: string | null;
+    interactiveReplyId: string | null;
   }) {
     const from = payload.from;
     const body = payload.body.trim().toLowerCase();

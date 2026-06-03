@@ -16,6 +16,7 @@ import { CreateTicketDto } from './dto/create-ticket.dto';
 import { QueryTicketsDto } from './dto/query-tickets.dto';
 import { CancelTicketDto } from './dto/cancell-ticket.dto';
 import { UpdateNoteTicketDto } from './dto/update-note-ticket.dto';
+import { ActionTicketDto } from './dto/action-ticket.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
@@ -74,14 +75,19 @@ export class TicketsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Param('assignedTo') assignedTo: string,
     @GetUser() user: User,
+    @Body() { comment }: ActionTicketDto,
   ) {
-    return this.ticketsService.assignTicket(id, assignedTo, user);
+    return this.ticketsService.assignTicket(id, assignedTo, user, comment);
   }
 
   @Patch(':id/start')
   @Roles(UserRole.ADMIN, UserRole.OPERATOR)
-  startTicket(@Param('id', ParseUUIDPipe) id: string, @GetUser() user: User) {
-    return this.ticketsService.startTicket(id, user);
+  startTicket(
+    @Param('id', ParseUUIDPipe) id: string,
+    @GetUser() user: User,
+    @Body() { comment }: ActionTicketDto,
+  ) {
+    return this.ticketsService.startTicket(id, user, comment);
   }
 
   @Patch(':id/complete')
@@ -89,8 +95,9 @@ export class TicketsController {
   completeTicket(
     @Param('id', ParseUUIDPipe) id: string,
     @GetUser() user: User,
+    @Body() { comment }: ActionTicketDto,
   ) {
-    return this.ticketsService.completeTicket(id, user);
+    return this.ticketsService.completeTicket(id, user, comment);
   }
 
   @Patch(':id/update-note')
@@ -106,9 +113,9 @@ export class TicketsController {
   @Roles(UserRole.ADMIN, UserRole.OPERATOR)
   cancelTicket(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() { cancellationReason }: CancelTicketDto,
+    @Body() { comment }: CancelTicketDto,
     @GetUser() user: User,
   ) {
-    return this.ticketsService.cancelTicket(id, cancellationReason, user);
+    return this.ticketsService.cancelTicket(id, user, comment);
   }
 }

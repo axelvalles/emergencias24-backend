@@ -1,6 +1,6 @@
 import { DataSource } from 'typeorm';
 import { config } from 'dotenv';
-config({ path: '.env.production.local' });
+config();
 
 const AppDataSource = new DataSource({
   type: 'postgres',

@@ -12,28 +12,16 @@ const validEnv = {
 };
 
 describe('envSchema', () => {
-  it('accepts valid env and applies throttle defaults', () => {
+  it('accepts valid env', () => {
     const parsed = envSchema.parse(validEnv);
 
     expect(parsed.JWT_SECRET).toBe('super-secret');
-    expect(parsed.AUTH_LOGIN_THROTTLE_TTL).toBe(60);
-    expect(parsed.AUTH_LOGIN_THROTTLE_LIMIT).toBe(5);
   });
 
   it('rejects missing JWT_SECRET', () => {
     const parsed = envSchema.safeParse({
       ...validEnv,
       JWT_SECRET: undefined,
-    });
-
-    expect(parsed.success).toBe(false);
-  });
-
-  it('rejects non-positive throttle values', () => {
-    const parsed = envSchema.safeParse({
-      ...validEnv,
-      AUTH_LOGIN_THROTTLE_TTL: 0,
-      AUTH_LOGIN_THROTTLE_LIMIT: -1,
     });
 
     expect(parsed.success).toBe(false);

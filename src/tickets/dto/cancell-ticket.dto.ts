@@ -1,6 +1,7 @@
-import { IsString } from 'class-validator';
+import { IsString, IsOptional } from 'class-validator';
 
 export class CancelTicketDto {
+  @IsOptional()
   @IsString()
-  cancellationReason: string;
+  comment?: string;
 }

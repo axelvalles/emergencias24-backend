@@ -6,7 +6,6 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { Throttle } from '@nestjs/throttler';
 import { BotService } from './bot.service';
 import { TwilioWebhookGuard } from './twilio-webhook.guard';
 import {
@@ -30,28 +29,56 @@ export class BotController {
 
   @Post('incoming')
   @HttpCode(200)
-  @Throttle({ default: { ttl: 60_000, limit: 30 } })
   @UseGuards(TwilioWebhookGuard)
   async handleIncomingMessage(@Body() payload: TwilioIncomingMessageDto) {
     const from = payload.From;
-    const body = payload.Body || '';
     const profileName = payload.ProfileName || '';
-    const location =
-      payload.Latitude && payload.Longitude
-        ? {
-            latitude: payload.Latitude,
-            longitude: payload.Longitude,
-          }
-        : null;
+    const messageType = payload.MessageType || 'text';
 
-    this.logger.log(`Incoming message from ${this.maskPhone(from)}`);
-    await this.botService.handleMessage({ body, from, profileName, location });
+    let body = '';
+    let location: { latitude: string; longitude: string } | null = null;
+    let mediaUrl: string | null = null;
+    let mediaContentType: string | null = null;
+    let interactiveReplyId = '';
+
+    if (messageType === 'location' && payload.Latitude && payload.Longitude) {
+      location = {
+        latitude: payload.Latitude,
+        longitude: payload.Longitude,
+      };
+    } else if (messageType === 'interactive') {
+      interactiveReplyId = payload.Body || payload.ListId || '';
+      body = interactiveReplyId;
+    } else if (
+      messageType === 'image' ||
+      messageType === 'video' ||
+      messageType === 'audio'
+    ) {
+      mediaUrl = payload.MediaUrl0 || null;
+      mediaContentType = payload.MediaContentType0 || null;
+      body = payload.Body || '';
+    } else {
+      body = payload.Body || '';
+    }
+
+    this.logger.log(
+      `Incoming ${messageType} message from ${this.maskPhone(from)}`,
+    );
+
+    await this.botService.handleMessage({
+      body,
+      from,
+      profileName,
+      location,
+      mediaUrl,
+      mediaContentType,
+      interactiveReplyId,
+    });
 
     return { ok: true };
   }
 
   @Post('status')
-  @Throttle({ default: { ttl: 60_000, limit: 60 } })
   @UseGuards(TwilioWebhookGuard)
   handleStatusCallback(@Body() status: TwilioStatusCallbackDto) {
     this.logger.log(

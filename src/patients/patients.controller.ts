@@ -15,7 +15,6 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { Throttle } from '@nestjs/throttler';
 import { Response } from 'express';
 import { PatientsService } from './patients.service';
 import { PatientsImportService } from './patients-import.service';
@@ -101,7 +100,6 @@ export class PatientsController {
 
   @Post('import')
   @Roles(UserRole.ADMIN)
-  @Throttle({ bulk: { ttl: 60_000, limit: 5 } })
   @UseInterceptors(
     FileInterceptor('file', {
       limits: {

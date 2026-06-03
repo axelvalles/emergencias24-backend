@@ -1,5 +1,4 @@
 import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
-import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from '../users/dto/forgot-password.dto';
@@ -11,14 +10,12 @@ export class AuthController {
 
   @HttpCode(HttpStatus.OK)
   @Post('login')
-  @Throttle({ default: { ttl: 60_000, limit: 2 } })
   async login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
   }
 
   @HttpCode(HttpStatus.OK)
   @Post('forgot-password')
-  @Throttle({ auth: { ttl: 60_000, limit: 2 } })
   async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
     await this.authService.forgotPassword(forgotPasswordDto.email);
     return { message: 'If the email exists, a reset link will be sent' };

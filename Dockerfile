@@ -1,23 +1,24 @@
 # ---- Build Stage ----
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 
 # Copia solo los archivos necesarios para instalar dependencias
-COPY package*.json ./
-RUN npm ci
+COPY package.json pnpm-lock.yaml ./
+RUN corepack enable && pnpm install --frozen-lockfile --config.strict-dep-builds=false
 
 # Copia el resto del código fuente
 COPY . .
 
 # Compila el proyecto NestJS
-RUN npm run build
+RUN pnpm run build
 
 # ---- Runtime Stage ----
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 WORKDIR /app
 
 # Copia solo lo necesario desde el builder
-COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/pnpm-lock.yaml ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 
