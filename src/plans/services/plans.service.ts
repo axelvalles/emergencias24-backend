@@ -4,32 +4,49 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder } from 'typeorm';
+import { In, Repository, SelectQueryBuilder } from 'typeorm';
+import { applyGlobalSearch } from '../../common/query/apply-global-search';
+import { Benefit } from '../../benefits/entities/benefit.entity';
+import {
+  CreatePlanBenefitDto,
+  CreatePlanDto,
+} from '../dto/create-plan.dto';
+import { QueryPlansDto } from '../dto/query-plans.dto';
+import { UpdatePlanDto } from '../dto/update-plan.dto';
 import { Plan, PlanStatus } from '../entities/plan.entity';
+import {
+  PlanBenefit,
+  PlanBenefitValueType,
+} from '../entities/plan-benefit.entity';
 import {
   PlanSubscription,
   PlanSubscriptionStatus,
 } from '../entities/plan-subscription.entity';
-import { CreatePlanDto } from '../dto/create-plan.dto';
-import { UpdatePlanDto } from '../dto/update-plan.dto';
-import { QueryPlansDto } from '../dto/query-plans.dto';
-import { applyGlobalSearch } from '../../common/query/apply-global-search';
 
 @Injectable()
 export class PlansService {
   constructor(
     @InjectRepository(Plan)
     private readonly planRepository: Repository<Plan>,
+    @InjectRepository(Benefit)
+    private readonly benefitRepository: Repository<Benefit>,
+    @InjectRepository(PlanBenefit)
+    private readonly planBenefitRepository: Repository<PlanBenefit>,
     @InjectRepository(PlanSubscription)
     private readonly planSubscriptionRepository: Repository<PlanSubscription>,
   ) {}
 
   async create(createPlanDto: CreatePlanDto): Promise<Plan> {
-    const plan = this.planRepository.create({
-      ...createPlanDto,
-      benefits: createPlanDto.benefits ?? {},
-    });
-    return this.planRepository.save(plan);
+    const { planBenefits, ...planData } = createPlanDto;
+
+    await this.validatePlanBenefits(planBenefits);
+
+    const plan = this.planRepository.create(planData);
+    const savedPlan = await this.planRepository.save(plan);
+
+    await this.syncPlanBenefits(savedPlan.id, planBenefits);
+
+    return this.findOne(savedPlan.id);
   }
 
   async findAll(queryDto: QueryPlansDto = {}): Promise<{
@@ -64,6 +81,10 @@ export class PlansService {
           ],
         }),
     );
+    queryBuilder.loadRelationCountAndMap(
+      'plan.benefitsCount',
+      'plan.planBenefits',
+    );
 
     this.applyFilters(queryBuilder, filters);
     this.applySorting(queryBuilder, sortBy, sortOrder);
@@ -95,6 +116,7 @@ export class PlansService {
       skip,
       take: limit,
     });
+
     return {
       data,
       total,
@@ -108,6 +130,8 @@ export class PlansService {
     const plan = await this.planRepository
       .createQueryBuilder('plan')
       .where('plan.id = :id', { id })
+      .leftJoinAndSelect('plan.planBenefits', 'planBenefit')
+      .leftJoinAndSelect('planBenefit.benefit', 'benefit')
       .loadRelationCountAndMap(
         'plan.activeSubscriptionsCount',
         'plan.subscriptions',
@@ -120,6 +144,8 @@ export class PlansService {
             ],
           }),
       )
+      .loadRelationCountAndMap('plan.benefitsCount', 'plan.planBenefits')
+      .orderBy('benefit.name', 'ASC')
       .getOne();
 
     if (!plan) {
@@ -130,16 +156,25 @@ export class PlansService {
   }
 
   async update(id: string, updatePlanDto: UpdatePlanDto): Promise<Plan> {
-    const plan = await this.findOne(id);
+    await this.findOne(id);
+    const plan = await this.findOneForPersistence(id);
+    const { planBenefits, ...planData } = updatePlanDto;
 
-    Object.assign(plan, updatePlanDto);
+    if (planBenefits !== undefined) {
+      await this.validatePlanBenefits(planBenefits);
+      await this.syncPlanBenefits(id, planBenefits);
+    }
+
+    Object.assign(plan, planData);
     plan.updatedAt = new Date();
 
-    return this.planRepository.save(plan);
+    await this.planRepository.save(plan);
+
+    return this.findOne(id);
   }
 
   async remove(id: string): Promise<void> {
-    const plan = await this.findOne(id);
+    const plan = await this.findOneForPersistence(id);
 
     const activeOrSuspendedSubscriptions = await this.planSubscriptionRepository
       .createQueryBuilder('subscription')
@@ -162,17 +197,29 @@ export class PlansService {
   }
 
   async deactivate(id: string): Promise<Plan> {
-    const plan = await this.findOne(id);
+    const plan = await this.findOneForPersistence(id);
     plan.status = PlanStatus.INACTIVE;
     plan.updatedAt = new Date();
     return this.planRepository.save(plan);
   }
 
   async activate(id: string): Promise<Plan> {
-    const plan = await this.findOne(id);
+    const plan = await this.findOneForPersistence(id);
     plan.status = PlanStatus.ACTIVE;
     plan.updatedAt = new Date();
     return this.planRepository.save(plan);
+  }
+
+  private async findOneForPersistence(id: string): Promise<Plan> {
+    const plan = await this.planRepository.findOne({
+      where: { id },
+    });
+
+    if (!plan) {
+      throw new NotFoundException(`Plan with ID ${id} not found`);
+    }
+
+    return plan;
   }
 
   private applyFilters(
@@ -181,14 +228,14 @@ export class PlansService {
   ) {
     applyGlobalSearch(queryBuilder, {
       query: filters.q,
-      expressions: ['plan.name', 'plan.description'],
+      expressions: ['plan.name', 'plan.description', 'plan.benefitsNotes'],
       paramName: 'planSearch',
     });
 
     if (filters.name) {
       const name = filters.name.trim().toLowerCase();
 
-      queryBuilder.andWhere(`(LOWER(plan.name) LIKE :name)`, {
+      queryBuilder.andWhere('(LOWER(plan.name) LIKE :name)', {
         name: `%${name}%`,
       });
     }
@@ -196,7 +243,7 @@ export class PlansService {
     if (filters.description) {
       const description = filters.description.trim().toLowerCase();
 
-      queryBuilder.andWhere(`(LOWER(plan.description) LIKE :description)`, {
+      queryBuilder.andWhere('(LOWER(plan.description) LIKE :description)', {
         description: `%${description}%`,
       });
     }
@@ -210,6 +257,12 @@ export class PlansService {
     if (filters.planType && filters.planType.length > 0) {
       queryBuilder.andWhere('plan.planType IN (:...planType)', {
         planType: filters.planType,
+      });
+    }
+
+    if (filters.billingPeriod && filters.billingPeriod.length > 0) {
+      queryBuilder.andWhere('plan.billingPeriod IN (:...billingPeriod)', {
+        billingPeriod: filters.billingPeriod,
       });
     }
 
@@ -236,6 +289,7 @@ export class PlansService {
       'name',
       'description',
       'planType',
+      'billingPeriod',
       'status',
       'monthlyCost',
       'createdAt',
@@ -244,6 +298,79 @@ export class PlansService {
 
     const column = allowedFields.includes(sortBy) ? sortBy : 'createdAt';
     queryBuilder.addOrderBy(`plan.${column}`, direction);
+  }
+
+  private async validatePlanBenefits(planBenefits: CreatePlanBenefitDto[]) {
+    const benefitIds = planBenefits.map((planBenefit) => planBenefit.benefitId);
+
+    if (new Set(benefitIds).size !== benefitIds.length) {
+      throw new BadRequestException(
+        'No se puede repetir el mismo beneficio dentro de un plan',
+      );
+    }
+
+    const benefits = await this.benefitRepository.findBy({
+      id: In(benefitIds),
+    });
+
+    if (benefits.length !== benefitIds.length) {
+      throw new BadRequestException('Uno o más beneficios enviados no existen');
+    }
+
+    for (const planBenefit of planBenefits) {
+      if (
+        planBenefit.valueType === PlanBenefitValueType.QUANTITY &&
+        !planBenefit.isUnlimited &&
+        typeof planBenefit.quantity !== 'number'
+      ) {
+        throw new BadRequestException(
+          'Los beneficios por cantidad requieren una cantidad o marcarse como ilimitados',
+        );
+      }
+
+      if (
+        planBenefit.valueType === PlanBenefitValueType.DISCOUNT &&
+        !planBenefit.discountPercentage
+      ) {
+        throw new BadRequestException(
+          'Los beneficios por descuento requieren un porcentaje',
+        );
+      }
+    }
+  }
+
+  private async syncPlanBenefits(
+    planId: string,
+    planBenefits: CreatePlanBenefitDto[],
+  ) {
+    await this.planBenefitRepository.delete({ planId });
+
+    if (planBenefits.length === 0) {
+      return;
+    }
+
+    const planBenefitEntities = planBenefits.map((planBenefit) =>
+      this.planBenefitRepository.create({
+        planId,
+        benefitId: planBenefit.benefitId,
+        valueType: planBenefit.valueType,
+        quantity:
+          planBenefit.valueType === PlanBenefitValueType.QUANTITY &&
+          !planBenefit.isUnlimited
+            ? planBenefit.quantity ?? null
+            : null,
+        isUnlimited:
+          planBenefit.valueType === PlanBenefitValueType.QUANTITY
+            ? planBenefit.isUnlimited
+            : false,
+        discountPercentage:
+          planBenefit.valueType === PlanBenefitValueType.DISCOUNT
+            ? planBenefit.discountPercentage ?? null
+            : null,
+      }),
+    );
+
+    await this.planBenefitRepository.save(planBenefitEntities);
   }
 }
 

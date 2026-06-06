@@ -3,6 +3,7 @@ import { SessionStoreService } from '../session-store.service';
 import { PatientsService } from 'src/patients/patients.service';
 import { TicketsService } from 'src/tickets/tickets.service';
 import { BotSession } from '../interfaces/bot-session.interface';
+import { MunicipalityPricingService } from 'src/municipality-pricing/municipality-pricing.service';
 
 export type BotStates =
   // Menu principal
@@ -43,6 +44,7 @@ export type Services = {
   sessionStore: SessionStoreService;
   patientsService: PatientsService;
   ticketsService: TicketsService;
+  municipalityPricingService: MunicipalityPricingService;
 };
 
 export type MessagingInput = {

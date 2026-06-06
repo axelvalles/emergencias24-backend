@@ -8,7 +8,11 @@ import {
   Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { PlanStatus, PlanType } from '../entities/plan.entity';
+import {
+  PlanBillingPeriod,
+  PlanStatus,
+  PlanType,
+} from '../entities/plan.entity';
 
 export class QueryPlansDto {
   @IsOptional()
@@ -32,6 +36,11 @@ export class QueryPlansDto {
   @IsArray()
   @IsEnum(PlanType, { each: true })
   planType?: PlanType[];
+
+  @IsOptional()
+  @IsArray()
+  @IsEnum(PlanBillingPeriod, { each: true })
+  billingPeriod?: PlanBillingPeriod[];
 
   @IsOptional()
   @Type(() => Number)

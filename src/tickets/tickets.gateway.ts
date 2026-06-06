@@ -29,6 +29,7 @@ export class TicketsGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
   private static readonly ALLOWED_ROLES = new Set<UserRole>([
+    UserRole.SUPER_ADMIN,
     UserRole.ADMIN,
     UserRole.OPERATOR,
   ]);

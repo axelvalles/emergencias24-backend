@@ -9,6 +9,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { uuidv7 } from 'uuidv7';
+import { PlanBenefit } from './plan-benefit.entity';
 import { PlanSubscription } from './plan-subscription.entity';
 
 export enum PlanStatus {
@@ -22,16 +23,11 @@ export enum PlanType {
   GROUP = 'GROUP',
 }
 
-export interface PlanBenefits {
-  telemedicine: boolean;
-  medicationDelivery: boolean;
-  ambulanceTransfer: boolean;
-  homeCare: boolean;
-  workplaceCare: boolean;
-  emergencyRoom: boolean;
-  specializedConsultations: boolean;
-  labTests: boolean;
-  notes?: string;
+export enum PlanBillingPeriod {
+  MONTHLY = 'MONTHLY',
+  QUARTERLY = 'QUARTERLY',
+  SEMIANNUAL = 'SEMIANNUAL',
+  ANNUAL = 'ANNUAL',
 }
 
 @Entity('plans')
@@ -55,9 +51,6 @@ export class Plan {
   @Column({ type: 'text', nullable: true })
   description: string;
 
-  @Column({ type: 'jsonb' })
-  benefits: PlanBenefits;
-
   @Index('IDX_PLANS_PLAN_TYPE')
   @Column({
     type: 'enum',
@@ -75,10 +68,25 @@ export class Plan {
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   monthlyCost: string;
 
+  @Column({
+    type: 'enum',
+    enum: PlanBillingPeriod,
+    default: PlanBillingPeriod.MONTHLY,
+  })
+  billingPeriod: PlanBillingPeriod;
+
+  @Column({ type: 'text', nullable: true })
+  benefitsNotes: string | null;
+
+  @OneToMany(() => PlanBenefit, (planBenefit) => planBenefit.plan)
+  planBenefits: PlanBenefit[];
+
   @OneToMany(() => PlanSubscription, (subscription) => subscription.plan)
   subscriptions: PlanSubscription[];
 
   activeSubscriptionsCount?: number;
+
+  benefitsCount?: number;
 
   /* =====================
      Auditoría

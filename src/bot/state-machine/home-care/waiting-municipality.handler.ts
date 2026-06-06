@@ -6,37 +6,13 @@ import {
   Services,
   BotStates,
 } from '../types';
+import { ServiceType } from 'src/tickets/entities/ticket.entity';
+import { MUNICIPALITIES } from 'src/municipality-pricing/constants/municipality-pricing.constants';
 
 export class HomeCareWaitingMunicipalityHandler extends BaseHandler {
   state: BotStates = 'HOME_CARE_WAITING_MUNICIPALITY';
 
-  private readonly municipalities = [
-    'Mariño',
-    'Maneiro',
-    'García',
-    'Arismendi',
-    'Antolín',
-    'Gómez',
-    'Marcano',
-    'Díaz',
-    'Tubores',
-    'P. Macanao',
-  ];
-
-  private readonly municipalityCosts = {
-    urban: {
-      municipalities: ['Mariño', 'Maneiro', 'García', 'Arismendi'],
-      cost: 55,
-    },
-    suburban: {
-      municipalities: ['Antolín', 'Gómez', 'Marcano', 'Díaz'],
-      cost: 65,
-    },
-    extraurban: {
-      municipalities: ['Tubores', 'P. Macanao'],
-      cost: 80,
-    },
-  };
+  private readonly municipalities = [...MUNICIPALITIES];
 
   async handle(
     messagingResponse: MessagingInput,
@@ -66,7 +42,19 @@ export class HomeCareWaitingMunicipalityHandler extends BaseHandler {
 
     const selectedMunicipality = this.municipalities[number - 1];
 
-    const cost = this.getMunicipalityCost(selectedMunicipality);
+    const cost =
+      await services.municipalityPricingService.getCostByMunicipality(
+        ServiceType.HOME_CARE,
+        selectedMunicipality,
+      );
+
+    if (cost === null) {
+      await services.messaging.sendMessage(
+        from,
+        `No tengo una tarifa configurada para el municipio *${selectedMunicipality}*. Por favor contacta a un operador para actualizarla.`,
+      );
+      return this.repeatState();
+    }
 
     await services.messaging.sendMessage(
       from,
@@ -92,14 +80,5 @@ export class HomeCareWaitingMunicipalityHandler extends BaseHandler {
 
   private buildMunicipalityList(): string {
     return this.municipalities.map((m, i) => `${i + 1}. ${m}`).join('\n');
-  }
-
-  private getMunicipalityCost(municipality: string): number | null {
-    const group = Object.values(this.municipalityCosts).find((g) =>
-      g.municipalities.some(
-        (m) => m.toLowerCase() === municipality.toLowerCase(),
-      ),
-    );
-    return group ? group.cost : null;
   }
 }

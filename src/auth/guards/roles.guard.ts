@@ -2,6 +2,16 @@ import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { UserRole } from '../../users/entities/user.entity';
 
+const ROLE_HIERARCHY: Record<UserRole, readonly UserRole[]> = {
+  [UserRole.SUPER_ADMIN]: [
+    UserRole.SUPER_ADMIN,
+    UserRole.ADMIN,
+    UserRole.OPERATOR,
+  ],
+  [UserRole.ADMIN]: [UserRole.ADMIN],
+  [UserRole.OPERATOR]: [UserRole.OPERATOR],
+};
+
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
@@ -18,8 +28,20 @@ export class RolesGuard implements CanActivate {
 
     const { user } = context.switchToHttp().getRequest();
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    const hasRole = requiredRole.some((role) => user?.role?.includes(role));
+    const rawUserRoles = Array.isArray(user?.role)
+      ? user.role
+      : typeof user?.role === 'string'
+        ? [user.role]
+        : [];
+
+    const normalizedUserRoles = rawUserRoles.filter(
+      (role): role is UserRole => Object.values(UserRole).includes(role as UserRole),
+    );
+
+    const hasRole = normalizedUserRoles.some((userRole) =>
+      requiredRole.some((role) => ROLE_HIERARCHY[userRole].includes(role)),
+    );
+
     return hasRole;
   }
 }

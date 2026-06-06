@@ -11,6 +11,7 @@ import { uuidv7 } from 'uuidv7';
 import { Exclude, Expose } from 'class-transformer';
 
 export enum UserRole {
+  SUPER_ADMIN = 'super-admin',
   ADMIN = 'admin',
   OPERATOR = 'operator',
 }

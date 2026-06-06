@@ -45,7 +45,7 @@ async function main() {
     if (existingByEmail) {
       existingByEmail.passwordHash = passwordHash;
 
-      existingByEmail.role = UserRole.ADMIN;
+      existingByEmail.role = UserRole.SUPER_ADMIN;
 
       existingByEmail.status = UserStatus.ACTIVE;
 
@@ -67,7 +67,7 @@ async function main() {
     // Fallback: if another admin already exists, keep it and also create configured admin
 
     const existingSuperAdmin = await userRepository.findOne({
-      where: { role: UserRole.ADMIN },
+       where: { role: UserRole.SUPER_ADMIN },
     });
 
     if (existingSuperAdmin) {
@@ -81,7 +81,7 @@ async function main() {
 
       passwordHash,
 
-      role: UserRole.ADMIN,
+       role: UserRole.SUPER_ADMIN,
 
       status: UserStatus.ACTIVE,
 

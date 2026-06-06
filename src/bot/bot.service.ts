@@ -5,6 +5,7 @@ import { PatientsService } from 'src/patients/patients.service';
 import { TicketsService } from 'src/tickets/tickets.service';
 import { globalCommands } from './state-machine/global-commands.config';
 import { stateMachine } from './state-machine';
+import { MunicipalityPricingService } from 'src/municipality-pricing/municipality-pricing.service';
 
 @Injectable()
 export class BotService {
@@ -15,6 +16,7 @@ export class BotService {
     private readonly sessionStore: SessionStoreService,
     private readonly patientsService: PatientsService,
     private readonly ticketsService: TicketsService,
+    private readonly municipalityPricingService: MunicipalityPricingService,
   ) {}
 
   async handleMessage(payload: {
@@ -35,6 +37,7 @@ export class BotService {
       sessionStore: this.sessionStore,
       patientsService: this.patientsService,
       ticketsService: this.ticketsService,
+      municipalityPricingService: this.municipalityPricingService,
     };
 
     const userState = await this.sessionStore.getSession(from);

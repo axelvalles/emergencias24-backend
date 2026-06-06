@@ -12,10 +12,12 @@ import { AuthModule } from './auth/auth.module';
 import { MessagingModule } from './shared/messaging/messaging.module';
 import { TicketsModule } from './tickets/tickets.module';
 import { PlansModule } from './plans/plans.module';
+import { BenefitsModule } from './benefits/benefits.module';
 import { CompaniesModule } from './companies/companies.module';
 import { twilioConfig } from './config/twilio.config';
 import { dbConfig, typeOrmFactory } from './config/db.config';
 import { envSchema } from './config/configuration';
+import { MunicipalityPricingModule } from './municipality-pricing/municipality-pricing.module';
 
 // const isDevelopment = process.env.NODE_ENV !== 'production';
 
@@ -63,8 +65,10 @@ import { envSchema } from './config/configuration';
     }),
     MessagingModule,
     TicketsModule,
+    BenefitsModule,
     PlansModule,
     CompaniesModule,
+    MunicipalityPricingModule,
     BotModule,
     PatientsModule,
     UsersModule,

@@ -1,42 +1,54 @@
 import {
+  ArrayUnique,
+  IsArray,
   IsString,
   IsOptional,
   IsBoolean,
+  IsInt,
+  IsUUID,
+  Min,
   ValidateNested,
   IsEnum,
   Matches,
+  ValidateIf,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { PlanType, PlanStatus } from '../entities/plan.entity';
+import { PlanBillingPeriod, PlanType, PlanStatus } from '../entities/plan.entity';
+import { PlanBenefitValueType } from '../entities/plan-benefit.entity';
 
-export class PlanBenefitsDto {
-  @IsBoolean()
-  telemedicine: boolean;
+export class CreatePlanBenefitDto {
+  @IsUUID()
+  benefitId: string;
 
-  @IsBoolean()
-  medicationDelivery: boolean;
+  @IsEnum(PlanBenefitValueType)
+  valueType: PlanBenefitValueType;
 
-  @IsBoolean()
-  ambulanceTransfer: boolean;
-
-  @IsBoolean()
-  homeCare: boolean;
-
-  @IsBoolean()
-  workplaceCare: boolean;
-
-  @IsBoolean()
-  emergencyRoom: boolean;
-
-  @IsBoolean()
-  specializedConsultations: boolean;
-
-  @IsBoolean()
-  labTests: boolean;
-
+  @ValidateIf(
+    (value: CreatePlanBenefitDto) =>
+      value.valueType === PlanBenefitValueType.QUANTITY,
+  )
   @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  quantity?: number;
+
+  @ValidateIf(
+    (value: CreatePlanBenefitDto) =>
+      value.valueType === PlanBenefitValueType.QUANTITY,
+  )
+  @IsBoolean()
+  isUnlimited: boolean;
+
+  @ValidateIf(
+    (value: CreatePlanBenefitDto) =>
+      value.valueType === PlanBenefitValueType.DISCOUNT,
+  )
   @IsString()
-  notes?: string;
+  @Matches(/^(100|\d{1,2})(\.\d{1,2})?$/, {
+    message: 'discountPercentage must be between 0 and 100 with up to 2 decimals',
+  })
+  discountPercentage?: string;
 }
 
 export class CreatePlanDto {
@@ -47,12 +59,11 @@ export class CreatePlanDto {
   @IsString()
   description?: string;
 
-  @ValidateNested()
-  @Type(() => PlanBenefitsDto)
-  benefits: PlanBenefitsDto;
-
   @IsEnum(PlanType)
   planType: PlanType;
+
+  @IsEnum(PlanBillingPeriod)
+  billingPeriod: PlanBillingPeriod;
 
   @IsOptional()
   @IsEnum(PlanStatus)
@@ -64,4 +75,14 @@ export class CreatePlanDto {
     message: 'monthlyCost must be a valid decimal with up to 2 decimals',
   })
   monthlyCost?: string;
+
+  @IsOptional()
+  @IsString()
+  benefitsNotes?: string;
+
+  @IsArray()
+  @ArrayUnique((planBenefit: CreatePlanBenefitDto) => planBenefit.benefitId)
+  @ValidateNested({ each: true })
+  @Type(() => CreatePlanBenefitDto)
+  planBenefits: CreatePlanBenefitDto[];
 }
