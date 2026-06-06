@@ -175,7 +175,13 @@ $ npm run test:cov
 ### Comandos Globales
 
 - `menu` - Volver al menú principal
+- `volver` - Regresar al paso anterior
+- `cancelar` - Cancelar el flujo actual y volver al menú
 - `ayuda` - Mostrar ayuda
+
+### Documentación del flujo
+
+- `docs/bot-state-matrix.md` - Matriz de estados, transiciones y reglas de navegación del bot
 
 ## 🗄️ Modelo de Datos
 

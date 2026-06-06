@@ -6,10 +6,17 @@ import { TicketsService } from 'src/tickets/tickets.service';
 import { globalCommands } from './state-machine/global-commands.config';
 import { stateMachine } from './state-machine';
 import { MunicipalityPricingService } from 'src/municipality-pricing/municipality-pricing.service';
+import {
+  BOT_MESSAGES,
+  sendPromptForState,
+} from './state-machine/navigation.config';
+import { BOT_STATES, type BotStates } from './state-machine/types';
+import { SESSION_TTL_SECONDS } from './session-store.service';
 
 @Injectable()
 export class BotService {
   private readonly logger = new Logger(BotService.name);
+  private readonly sessionTimeoutMs = SESSION_TTL_SECONDS * 1000;
 
   constructor(
     private readonly messaging: MessagingService,
@@ -48,23 +55,22 @@ export class BotService {
       const lastInteractionTime = new Date(userState.lastInteraction).getTime();
       const diff = now - lastInteractionTime;
 
-      if (diff > 3600000) {
-        const result = await globalCommands[0].execute(
-          { from, profileName, patient: userState.patient },
-          {
-            messaging: this.messaging,
-            sessionStore: this.sessionStore,
-            patientsService: this.patientsService,
-          },
-        );
+      if (diff > this.sessionTimeoutMs) {
+        await this.messaging.sendMessage(from, BOT_MESSAGES.SESSION_EXPIRED);
 
-        await this.sessionStore.setSession(from, {
-          currentState: result.nextState,
+        const nextState = await sendPromptForState({
           from,
-          lastInteraction: new Date().toISOString(),
-          previousState: userState.currentState,
-          patient: userState.patient,
+          profileName,
+          state: BOT_STATES.WAITING_MENU_OPTION,
+          services: { messaging: this.messaging },
         });
+
+        await this.persistSessionTransition(
+          from,
+          userState,
+          userState.currentState,
+          nextState,
+        );
 
         return;
       }
@@ -80,6 +86,8 @@ export class BotService {
           from,
           profileName,
           patient: userState.patient,
+          currentState: userState.currentState,
+          previousState: userState.previousState,
         },
         {
           messaging: this.messaging,
@@ -88,13 +96,12 @@ export class BotService {
         },
       );
 
-      await this.sessionStore.setSession(from, {
-        currentState: result.nextState,
+      await this.persistSessionTransition(
         from,
-        lastInteraction: new Date().toISOString(),
-        previousState: userState.currentState,
-        patient: userState.patient,
-      });
+        userState,
+        userState.currentState,
+        result.nextState,
+      );
 
       return;
     }
@@ -103,6 +110,49 @@ export class BotService {
 
     const result = await handler.handle(payload, userState, services);
 
-    await this.sessionStore.setCurentState(from, result.nextState);
+    await this.persistSessionTransition(
+      from,
+      userState,
+      userState.currentState,
+      result.nextState,
+      profileName,
+    );
+  }
+
+  private async persistSessionTransition(
+    from: string,
+    currentSession: Awaited<ReturnType<SessionStoreService['getSession']>>,
+    currentState: BotStates,
+    requestedNextState: BotStates,
+    profileName = '',
+  ): Promise<void> {
+    let nextState = requestedNextState;
+
+    if (requestedNextState === BOT_STATES.START) {
+      await this.messaging.sendMessage(from, BOT_MESSAGES.FLOW_COMPLETED_MENU);
+
+      nextState = await sendPromptForState({
+        from,
+        profileName,
+        state: BOT_STATES.WAITING_MENU_OPTION,
+        services: { messaging: this.messaging },
+      });
+    }
+
+    await this.sessionStore.setSession(from, {
+      ...currentSession,
+      currentState: nextState,
+      from,
+      lastInteraction: new Date().toISOString(),
+      previousState: currentState,
+      municipality:
+        nextState === BOT_STATES.WAITING_MENU_OPTION
+          ? undefined
+          : currentSession.municipality,
+      speciality:
+        nextState === BOT_STATES.WAITING_MENU_OPTION
+          ? undefined
+          : currentSession.speciality,
+    });
   }
 }

@@ -5,6 +5,7 @@ import {
   Response,
   BotStates,
 } from './types';
+import { withNavigationHint } from './navigation.config';
 
 export abstract class BaseHandler {
   abstract state: BotStates;
@@ -19,7 +20,10 @@ export abstract class BaseHandler {
     message: string,
     currentState: BotStates,
   ): Promise<Response> {
-    await services.messaging.sendMessage(messagingResponse.from, message);
+    await services.messaging.sendMessage(
+      messagingResponse.from,
+      withNavigationHint(message),
+    );
     return {
       nextState: currentState,
       lastInteraction: this.now(),

@@ -6,10 +6,11 @@ import {
   Context,
   Services,
   BotStates,
+  BOT_STATES,
 } from '../types';
 
 export class PlanWaitingOptionHandler extends BaseHandler {
-  state: BotStates = 'Plan_WAITING_OPTION';
+  state: BotStates = BOT_STATES.PLAN_WAITING_OPTION;
 
   equipmentOptions = {
     '1': 'Familiar',
@@ -46,11 +47,11 @@ export class PlanWaitingOptionHandler extends BaseHandler {
 
     await services.messaging.sendMessage(
       from,
-      `Perfecto. En breve nuestro equipo te contactará para brindarte más información sobre el plan ${this.equipmentOptions[selectedItem]}.`,
+      `Perfecto. Hemos recibido tu solicitud y en breve nuestro equipo te contactará para brindarte más información sobre el plan ${this.equipmentOptions[selectedItem]}.`,
     );
 
     return {
-      nextState: 'START',
+      nextState: BOT_STATES.START,
       lastInteraction: new Date().toISOString(),
       currentState: this.state,
     };

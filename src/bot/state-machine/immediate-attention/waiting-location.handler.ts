@@ -5,11 +5,12 @@ import {
   Context,
   Services,
   BotStates,
+  BOT_STATES,
 } from '../types';
 import { ServiceType, Priority } from 'src/tickets/entities/ticket.entity';
 
 export class ImmediateAttentionWaitingLocationHandler extends BaseHandler {
-  state: BotStates = 'IMMEDIATE_ATTENTION_WAITING_LOCATION';
+  state: BotStates = BOT_STATES.IMMEDIATE_ATTENTION_WAITING_LOCATION;
 
   async handle(
     messagingResponse: MessagingInput,
@@ -43,11 +44,11 @@ export class ImmediateAttentionWaitingLocationHandler extends BaseHandler {
 
     await services.messaging.sendMessage(
       from,
-      '¡Ubicación recibida! Hemos generado un ticket de servicio, un operador le contactará de inmediato.',
+      '¡Ubicación recibida! Hemos generado tu solicitud y un operador te contactará de inmediato.',
     );
 
     return {
-      nextState: 'START',
+      nextState: BOT_STATES.START,
       lastInteraction: this.now(),
       currentState: this.state,
     };

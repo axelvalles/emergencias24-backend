@@ -6,10 +6,11 @@ import {
   Context,
   Services,
   BotStates,
+  BOT_STATES,
 } from '../types';
 
 export class HomeCareWaitingLocationHandler extends BaseHandler {
-  state: BotStates = 'HOME_CARE_WAITING_LOCATION';
+  state: BotStates = BOT_STATES.HOME_CARE_WAITING_LOCATION;
 
   async handle(
     messagingResponse: MessagingInput,
@@ -17,6 +18,15 @@ export class HomeCareWaitingLocationHandler extends BaseHandler {
     services: Services,
   ): Promise<Response> {
     const { from, body, profileName, location } = messagingResponse;
+
+    if (location === null && body.trim() === '') {
+      return this.invalidResponse(
+        services,
+        messagingResponse,
+        'Por favor, escribe o envía una ubicación para poder continuar.',
+        this.state,
+      );
+    }
 
     await services.ticketsService.create({
       serviceType: ServiceType.HOME_CARE,
@@ -34,11 +44,11 @@ export class HomeCareWaitingLocationHandler extends BaseHandler {
 
     await services.messaging.sendMessage(
       messagingResponse.from,
-      'Perfecto. Un operador se comunicará contigo para confirmar los detalles.',
+      'Perfecto. Recibí tu ubicación y un operador se comunicará contigo para confirmar los detalles.',
     );
 
     return {
-      nextState: 'START',
+      nextState: BOT_STATES.START,
       lastInteraction: new Date().toISOString(),
       currentState: this.state,
     };

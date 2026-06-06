@@ -5,6 +5,8 @@ import { BotSession } from './interfaces/bot-session.interface';
 import { Patient } from 'src/patients/entities/patient.entity';
 import { BotStates } from './state-machine/types';
 
+export const SESSION_TTL_SECONDS = 60 * 30;
+
 @Injectable()
 export class SessionStoreService {
   constructor(@InjectRedis() private readonly redis: Redis) {}
@@ -30,7 +32,7 @@ export class SessionStoreService {
       `session:${from}`,
       JSON.stringify(session),
       'EX',
-      60 * 30,
+      SESSION_TTL_SECONDS,
     );
   }
 
@@ -58,8 +60,13 @@ export class SessionStoreService {
 
   async setCurentState(from: string, state: BotStates): Promise<void> {
     const session = await this.getSession(from);
+    session.previousState = session.currentState;
     session.currentState = state;
     session.lastInteraction = new Date().toISOString();
     await this.setSession(from, session);
+  }
+
+  async transitionToState(from: string, state: BotStates): Promise<void> {
+    await this.setCurentState(from, state);
   }
 }

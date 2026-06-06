@@ -5,12 +5,14 @@ import {
   Context,
   Services,
   BotStates,
+  BOT_STATES,
 } from '../types';
 import { ServiceType } from 'src/tickets/entities/ticket.entity';
 import { MUNICIPALITIES } from 'src/municipality-pricing/constants/municipality-pricing.constants';
+import { withNavigationHint } from '../navigation.config';
 
 export class AmbulanceWaitingMunicipalityHandler extends BaseHandler {
-  state: BotStates = 'AMBULANCE_WAITING_MUNICIPALITY';
+  state: BotStates = BOT_STATES.AMBULANCE_WAITING_MUNICIPALITY;
 
   private readonly municipalities = [...MUNICIPALITIES];
   async handle(
@@ -57,7 +59,9 @@ export class AmbulanceWaitingMunicipalityHandler extends BaseHandler {
 
     await services.messaging.sendMessage(
       from,
-      `Para el municipio *${selectedMunicipality}*, el costo es de ${cost}$.\n¿Deseas solicitar el servicio? (Sí/No)`,
+      withNavigationHint(
+        `Para el municipio *${selectedMunicipality}*, el costo es de ${cost}$.\n¿Deseas solicitar el servicio? Responde "Sí" o "No".`,
+      ),
     );
 
     await services.sessionStore.setMunicipality(from, selectedMunicipality);

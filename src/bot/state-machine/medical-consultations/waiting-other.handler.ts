@@ -6,10 +6,11 @@ import {
   Context,
   Services,
   BotStates,
+  BOT_STATES,
 } from '../types';
 
 export class MedicalConsultationsWaitingOtherHandler extends BaseHandler {
-  state: BotStates = 'MEDICAL_CONSULTATIONS_WAITING_OTHER';
+  state: BotStates = BOT_STATES.MEDICAL_CONSULTATIONS_WAITING_OTHER;
 
   private readonly specialitiesLabels = {
     1: 'Consulta Medicina General',
@@ -31,6 +32,15 @@ export class MedicalConsultationsWaitingOtherHandler extends BaseHandler {
   ): Promise<Response> {
     const response = messagingResponse.body.toLowerCase().trim();
 
+    if (response === '') {
+      return this.invalidResponse(
+        services,
+        messagingResponse,
+        'Por favor, escribe la especialidad que necesitas.',
+        this.state,
+      );
+    }
+
     await services.ticketsService.create({
       serviceType: ServiceType.MEDICAL_CONSULTATION,
       priority: Priority.HIGH,
@@ -43,11 +53,11 @@ export class MedicalConsultationsWaitingOtherHandler extends BaseHandler {
 
     await services.messaging.sendMessage(
       messagingResponse.from,
-      `¡Excelente! Estoy transfiriendo tu solicitud con nuestro personal de control de citas.'`,
+      'Excelente. Hemos enviado tu solicitud y nuestro personal de control de citas continuará el proceso contigo.',
     );
 
     return {
-      nextState: 'START',
+      nextState: BOT_STATES.START,
       lastInteraction: new Date().toISOString(),
       currentState: this.state,
     };

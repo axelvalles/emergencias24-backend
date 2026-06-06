@@ -5,10 +5,12 @@ import {
   Context,
   Services,
   BotStates,
+  BOT_STATES,
 } from '../types';
+import { BOT_MESSAGES, withNavigationHint } from '../navigation.config';
 
 export class HomeCareWaitingDomicileConfirmationHandler extends BaseHandler {
-  state: BotStates = 'HOME_CARE_WAITING_DOMICILE_CONFIRMATION';
+  state: BotStates = BOT_STATES.HOME_CARE_WAITING_DOMICILE_CONFIRMATION;
 
   async handle(
     messagingResponse: MessagingInput,
@@ -24,7 +26,7 @@ export class HomeCareWaitingDomicileConfirmationHandler extends BaseHandler {
       );
 
       return {
-        nextState: 'START',
+        nextState: BOT_STATES.START,
         lastInteraction: new Date().toISOString(),
         currentState: this.state,
       };
@@ -33,11 +35,11 @@ export class HomeCareWaitingDomicileConfirmationHandler extends BaseHandler {
     if (response === 'sí' || response === 'si') {
       await services.messaging.sendMessage(
         messagingResponse.from,
-        'Por favor, envíame tu ubicación exacta, para que nuestro equipo llegue de manera inmediata.',
+        withNavigationHint(BOT_MESSAGES.HOME_CARE_LOCATION),
       );
 
       return {
-        nextState: 'HOME_CARE_WAITING_LOCATION',
+        nextState: BOT_STATES.HOME_CARE_WAITING_LOCATION,
         lastInteraction: new Date().toISOString(),
         currentState: this.state,
       };
@@ -45,7 +47,7 @@ export class HomeCareWaitingDomicileConfirmationHandler extends BaseHandler {
 
     await services.messaging.sendMessage(
       messagingResponse.from,
-      'Por favor, responde con "Sí" o "No".',
+      withNavigationHint('Por favor, responde con "Sí" o "No".'),
     );
 
     return {

@@ -1,9 +1,13 @@
 import { MessagingService } from 'src/shared/messaging/messaging.service';
 import { SessionStoreService } from '../session-store.service';
 import { PatientsService } from 'src/patients/patients.service';
-import { TWILIO_TEMPLATES } from './templates';
-import { BotStates } from './types';
+import { BOT_STATES, BotStates } from './types';
 import { Patient } from 'src/patients/entities/patient.entity';
+import {
+  BOT_MESSAGES,
+  getPreviousState,
+  sendPromptForState,
+} from './navigation.config';
 
 type Services = {
   messaging: MessagingService;
@@ -15,6 +19,8 @@ type Context = {
   from: string;
   patient: Patient | null;
   profileName: string;
+  currentState: BotStates;
+  previousState: BotStates;
 };
 
 export type GlobalCommandHandler = {
@@ -31,23 +37,58 @@ export const globalCommands: GlobalCommandHandler[] = [
   {
     keywords: ['menu', 'inicio'],
     async execute(context, services) {
-      await services.messaging.sendTemplate(
-        context.from,
-        TWILIO_TEMPLATES.MAIN_MENU,
-        { name: context.profileName },
-      );
+      const nextState = await sendPromptForState({
+        from: context.from,
+        profileName: context.profileName,
+        state: BOT_STATES.WAITING_MENU_OPTION,
+        services,
+      });
 
-      return { nextState: 'WAITING_MENU_OPTION' };
+      return { nextState };
     },
   },
   {
     keywords: ['ayuda', 'help'],
     async execute(context, services) {
+      await services.messaging.sendMessage(context.from, BOT_MESSAGES.HELP);
+
+      return { nextState: context.currentState };
+    },
+  },
+  {
+    keywords: ['volver', 'atras', 'atrás'],
+    async execute(context, services) {
+      const previousState = getPreviousState(
+        context.currentState,
+        context.previousState,
+      );
+
+      const nextState = await sendPromptForState({
+        from: context.from,
+        profileName: context.profileName,
+        state: previousState,
+        services,
+      });
+
+      return { nextState };
+    },
+  },
+  {
+    keywords: ['cancelar', 'salir'],
+    async execute(context, services) {
       await services.messaging.sendMessage(
         context.from,
-        '📖 Puedes escribir "menu" para volver al menú principal o "ayuda" para ver este mensaje nuevamente.',
+        BOT_MESSAGES.CANCELLED,
       );
-      return { nextState: 'START' };
+
+      const nextState = await sendPromptForState({
+        from: context.from,
+        profileName: context.profileName,
+        state: BOT_STATES.WAITING_MENU_OPTION,
+        services,
+      });
+
+      return { nextState };
     },
   },
 ];

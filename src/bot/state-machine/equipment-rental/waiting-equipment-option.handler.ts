@@ -6,10 +6,11 @@ import {
   Context,
   Services,
   BotStates,
+  BOT_STATES,
 } from '../types';
 
 export class EquipmentRentalWaitingOptionHandler extends BaseHandler {
-  state: BotStates = 'EQUIPMENT_RENTAL_WAITING_OPTION';
+  state: BotStates = BOT_STATES.EQUIPMENT_RENTAL_WAITING_OPTION;
 
   equipmentOptions = {
     '1': 'Kit de bombona de oxígeno',
@@ -52,11 +53,11 @@ export class EquipmentRentalWaitingOptionHandler extends BaseHandler {
 
     await services.messaging.sendMessage(
       from,
-      'Perfecto. En breve le enviaremos los costos de su requerimiento.',
+      'Perfecto. Hemos recibido tu solicitud y en breve te enviaremos los costos del equipo solicitado.',
     );
 
     return {
-      nextState: 'START',
+      nextState: BOT_STATES.START,
       lastInteraction: new Date().toISOString(),
       currentState: this.state,
     };

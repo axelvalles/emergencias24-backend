@@ -6,10 +6,11 @@ import {
   Context,
   Services,
   BotStates,
+  BOT_STATES,
 } from '../types';
 
 export class LaboratoryWaitingTestHandler extends BaseHandler {
-  state: BotStates = 'LABORATORY_WAITING_TEST';
+  state: BotStates = BOT_STATES.LABORATORY_WAITING_TEST;
 
   async handle(
     messagingResponse: MessagingInput,
@@ -37,11 +38,11 @@ export class LaboratoryWaitingTestHandler extends BaseHandler {
 
     await services.messaging.sendMessage(
       from,
-      'Perfecto. En breve le enviaremos los costos de su requerimiento.',
+      'Perfecto. Hemos recibido tu solicitud y en breve te enviaremos los costos de los exámenes solicitados.',
     );
 
     return {
-      nextState: 'START',
+      nextState: BOT_STATES.START,
       lastInteraction: new Date().toISOString(),
       currentState: this.state,
     };

@@ -6,10 +6,12 @@ import {
   Context,
   Services,
   BotStates,
+  BOT_STATES,
 } from '../types';
+import { withNavigationHint } from '../navigation.config';
 
 export class TelemedicineWaitingIdHandler extends BaseHandler {
-  state: BotStates = 'TELEMEDICINE_WAITING_ID';
+  state: BotStates = BOT_STATES.TELEMEDICINE_WAITING_ID;
 
   async handle(
     messagingResponse: MessagingInput,
@@ -23,7 +25,9 @@ export class TelemedicineWaitingIdHandler extends BaseHandler {
     if (!isValidCI) {
       await services.messaging.sendMessage(
         messagingResponse.from,
-        'El número ingresado no parece ser válido. Por favor, ingrésalo nuevamente.',
+        withNavigationHint(
+          'El número ingresado no parece ser válido. Por favor, ingrésalo nuevamente.',
+        ),
       );
 
       return {
@@ -40,11 +44,11 @@ export class TelemedicineWaitingIdHandler extends BaseHandler {
     if (!patient) {
       await services.messaging.sendMessage(
         messagingResponse.from,
-        'Parece que no estas registrado. Si quieres afiliarte puedes enviar un correo a analista@emergencias24ve.com',
+        'No encontré un registro asociado a esa cédula. Si deseas afiliarte, puedes escribir a analista@emergencias24ve.com.',
       );
 
       return {
-        nextState: 'START',
+        nextState: BOT_STATES.START,
         lastInteraction: new Date().toISOString(),
         currentState: this.state,
       };
@@ -69,11 +73,11 @@ export class TelemedicineWaitingIdHandler extends BaseHandler {
 
     await services.messaging.sendMessage(
       messagingResponse.from,
-      `Gracias ${patient.fullName}. Hemos enviado tu solicitud. Un médico de guardia te contactará en breve.`,
+      `Gracias, ${patient.fullName}. Hemos enviado tu solicitud y un médico de guardia te contactará en breve.`,
     );
 
     return {
-      nextState: 'START',
+      nextState: BOT_STATES.START,
       lastInteraction: new Date().toISOString(),
       currentState: this.state,
     };

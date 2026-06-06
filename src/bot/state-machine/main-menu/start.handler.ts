@@ -6,10 +6,11 @@ import {
   Context,
   Services,
   BotStates,
+  BOT_STATES,
 } from '../types';
 
 export class MainMenuStartHandler extends BaseHandler {
-  state: BotStates = 'START';
+  state: BotStates = BOT_STATES.START;
 
   async handle(
     messagingResponse: MessagingInput,
@@ -23,7 +24,7 @@ export class MainMenuStartHandler extends BaseHandler {
     );
 
     return {
-      nextState: 'WAITING_MENU_OPTION',
+      nextState: BOT_STATES.WAITING_MENU_OPTION,
       lastInteraction: new Date().toISOString(),
       currentState: this.state,
     };

@@ -6,10 +6,12 @@ import {
   Context,
   Services,
   BotStates,
+  BOT_STATES,
 } from '../types';
+import { BOT_MESSAGES, withNavigationHint } from '../navigation.config';
 
 export class WaitingMenuOptionHandler extends BaseHandler {
-  state: BotStates = 'WAITING_MENU_OPTION';
+  state: BotStates = BOT_STATES.WAITING_MENU_OPTION;
 
   async handle(
     messagingResponse: MessagingInput,
@@ -20,11 +22,11 @@ export class WaitingMenuOptionHandler extends BaseHandler {
       case 'atencion-inmediata':
         await services.messaging.sendMessage(
           messagingResponse.from,
-          'Para coordinar la ayuda de inmediato, por favor, envíame tu ubicación actual.',
+          withNavigationHint(BOT_MESSAGES.IMMEDIATE_ATTENTION_LOCATION),
         );
 
         return {
-          nextState: 'IMMEDIATE_ATTENTION_WAITING_LOCATION',
+          nextState: BOT_STATES.IMMEDIATE_ATTENTION_WAITING_LOCATION,
           lastInteraction: new Date().toISOString(),
           currentState: this.state,
         };
@@ -32,11 +34,11 @@ export class WaitingMenuOptionHandler extends BaseHandler {
       case 'telemedicina':
         await services.messaging.sendMessage(
           messagingResponse.from,
-          'Para continuar con la telemedicina, por favor, indícame tu número de Cédula de Identidad.',
+          withNavigationHint(BOT_MESSAGES.TELEMEDICINE_ID),
         );
 
         return {
-          nextState: 'TELEMEDICINE_WAITING_ID',
+          nextState: BOT_STATES.TELEMEDICINE_WAITING_ID,
           lastInteraction: new Date().toISOString(),
           currentState: this.state,
         };
@@ -44,11 +46,11 @@ export class WaitingMenuOptionHandler extends BaseHandler {
       case 'atencion-domiciliaria':
         await services.messaging.sendMessage(
           messagingResponse.from,
-          TWILIO_MESSSAGES.HOME_CARE_MUNICIPALITIES,
+          withNavigationHint(TWILIO_MESSSAGES.HOME_CARE_MUNICIPALITIES),
         );
 
         return {
-          nextState: 'HOME_CARE_WAITING_MUNICIPALITY',
+          nextState: BOT_STATES.HOME_CARE_WAITING_MUNICIPALITY,
           lastInteraction: new Date().toISOString(),
           currentState: this.state,
         };
@@ -56,11 +58,11 @@ export class WaitingMenuOptionHandler extends BaseHandler {
       case 'consultas-medicas':
         await services.messaging.sendMessage(
           messagingResponse.from,
-          TWILIO_MESSSAGES.MEDICAL_CONSULTATIONS_SPECIALITY,
+          withNavigationHint(TWILIO_MESSSAGES.MEDICAL_CONSULTATIONS_SPECIALITY),
         );
 
         return {
-          nextState: 'MEDICAL_CONSULTATIONS_WAITING_SPECIALTY',
+          nextState: BOT_STATES.MEDICAL_CONSULTATIONS_WAITING_SPECIALTY,
           lastInteraction: new Date().toISOString(),
           currentState: this.state,
         };
@@ -68,11 +70,11 @@ export class WaitingMenuOptionHandler extends BaseHandler {
       case 'laboratorio':
         await services.messaging.sendMessage(
           messagingResponse.from,
-          '¿Que pruebas desea realizar?',
+          withNavigationHint(BOT_MESSAGES.LABORATORY_TESTS),
         );
 
         return {
-          nextState: 'LABORATORY_WAITING_TEST',
+          nextState: BOT_STATES.LABORATORY_WAITING_TEST,
           lastInteraction: new Date().toISOString(),
           currentState: this.state,
         };
@@ -80,11 +82,11 @@ export class WaitingMenuOptionHandler extends BaseHandler {
       case 'ambulancia':
         await services.messaging.sendMessage(
           messagingResponse.from,
-          TWILIO_MESSSAGES.AMBULANCE_MUNICIPALITIES,
+          withNavigationHint(TWILIO_MESSSAGES.AMBULANCE_MUNICIPALITIES),
         );
 
         return {
-          nextState: 'AMBULANCE_WAITING_MUNICIPALITY',
+          nextState: BOT_STATES.AMBULANCE_WAITING_MUNICIPALITY,
           lastInteraction: new Date().toISOString(),
           currentState: this.state,
         };
@@ -92,11 +94,11 @@ export class WaitingMenuOptionHandler extends BaseHandler {
       case 'farmacia':
         await services.messaging.sendMessage(
           messagingResponse.from,
-          'Para contactar a nuestra farmacia, por favor comunícate a través de este enlace: 04227426303',
+          'Para contactar a nuestra farmacia, por favor comunícate al 0422-7426303. Ahora te mostraré el menú principal por si necesitas otra gestión.',
         );
 
         return {
-          nextState: 'START',
+          nextState: BOT_STATES.START,
           lastInteraction: new Date().toISOString(),
           currentState: this.state,
         };
@@ -104,11 +106,11 @@ export class WaitingMenuOptionHandler extends BaseHandler {
       case 'alquiler-de-equipos':
         await services.messaging.sendMessage(
           messagingResponse.from,
-          TWILIO_MESSSAGES.EQUIPMENT_RENTAL,
+          withNavigationHint(TWILIO_MESSSAGES.EQUIPMENT_RENTAL),
         );
 
         return {
-          nextState: 'EQUIPMENT_RENTAL_WAITING_OPTION',
+          nextState: BOT_STATES.EQUIPMENT_RENTAL_WAITING_OPTION,
           lastInteraction: new Date().toISOString(),
           currentState: this.state,
         };
@@ -116,11 +118,11 @@ export class WaitingMenuOptionHandler extends BaseHandler {
       case 'planes':
         await services.messaging.sendMessage(
           messagingResponse.from,
-          TWILIO_MESSSAGES.PLANS,
+          withNavigationHint(TWILIO_MESSSAGES.PLANS),
         );
 
         return {
-          nextState: 'Plan_WAITING_OPTION',
+          nextState: BOT_STATES.PLAN_WAITING_OPTION,
           lastInteraction: new Date().toISOString(),
           currentState: this.state,
         };
@@ -128,11 +130,11 @@ export class WaitingMenuOptionHandler extends BaseHandler {
       default:
         await services.messaging.sendMessage(
           messagingResponse.from,
-          'Opción no válida. Por favor, elige una opción del menú.',
+          'No reconocí esa opción. Por favor, elige una de las opciones del menú principal.',
         );
 
         return {
-          nextState: 'WAITING_MENU_OPTION',
+          nextState: BOT_STATES.WAITING_MENU_OPTION,
           lastInteraction: new Date().toISOString(),
           currentState: this.state,
         };

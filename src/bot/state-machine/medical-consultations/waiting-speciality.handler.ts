@@ -5,11 +5,13 @@ import {
   Context,
   Services,
   BotStates,
+  BOT_STATES,
 } from '../types';
 import { Priority, ServiceType } from 'src/tickets/entities/ticket.entity';
+import { withNavigationHint } from '../navigation.config';
 
 export class MedicalConsultationsWaitingSpecialityHandler extends BaseHandler {
-  state: BotStates = 'MEDICAL_CONSULTATIONS_WAITING_SPECIALTY';
+  state: BotStates = BOT_STATES.MEDICAL_CONSULTATIONS_WAITING_SPECIALTY;
 
   private readonly specialitiesLabels = {
     '1': 'Consulta Medicina General',
@@ -36,7 +38,9 @@ export class MedicalConsultationsWaitingSpecialityHandler extends BaseHandler {
     if (!validOptions.includes(selectedItemId)) {
       await services.messaging.sendMessage(
         messagingResponse.from,
-        'Opción no válida. Por favor, elige una opción del menú.',
+        withNavigationHint(
+          'Opción no válida. Por favor, elige una opción del menú.',
+        ),
       );
 
       return {
@@ -49,11 +53,11 @@ export class MedicalConsultationsWaitingSpecialityHandler extends BaseHandler {
     if (selectedItemId === '10') {
       await services.messaging.sendMessage(
         messagingResponse.from,
-        `Escriba la especialidad que necesite'`,
+        withNavigationHint('Escribe la especialidad que necesitas.'),
       );
 
       return {
-        nextState: 'START',
+        nextState: BOT_STATES.MEDICAL_CONSULTATIONS_WAITING_OTHER,
         lastInteraction: new Date().toISOString(),
         currentState: this.state,
       };
@@ -72,11 +76,11 @@ export class MedicalConsultationsWaitingSpecialityHandler extends BaseHandler {
 
     await services.messaging.sendMessage(
       messagingResponse.from,
-      `¡Excelente! Estoy transfiriendo tu solicitud con nuestro personal de control de citas.'`,
+      'Excelente. Hemos enviado tu solicitud y nuestro personal de control de citas continuará el proceso contigo.',
     );
 
     return {
-      nextState: 'START',
+      nextState: BOT_STATES.START,
       lastInteraction: new Date().toISOString(),
       currentState: this.state,
     };
