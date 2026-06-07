@@ -138,7 +138,13 @@ export class AmbulanceUnitsService {
 
     if (activeUsersCount > 0) {
       throw new ConflictException(
-        'Cannot delete unit with active associations',
+        'Cannot delete unit with active users',
+      );
+    }
+
+    if (unit.members && unit.members.length > 0) {
+      throw new ConflictException(
+        'Cannot delete unit with assigned members',
       );
     }
 
