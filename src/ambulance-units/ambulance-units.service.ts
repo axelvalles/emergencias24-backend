@@ -1,14 +1,16 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, Repository, SelectQueryBuilder } from 'typeorm';
 import { AmbulanceUnit } from './entities/ambulance-unit.entity';
 import { CreateAmbulanceUnitDto } from './dto/create-ambulance-unit.dto';
 import { UpdateAmbulanceUnitDto } from './dto/update-ambulance-unit.dto';
 import { SearchAmbulanceUnitDto } from './dto/search-ambulance-unit.dto';
+import { QueryAmbulanceUnitsDto } from './dto/query-ambulance-units.dto';
 import { User, UserRole, UserStatus } from 'src/users/entities/user.entity';
 
 @Injectable()
@@ -33,11 +35,44 @@ export class AmbulanceUnitsService {
     return this.findOne(savedUnit.id);
   }
 
-  async findAll(): Promise<AmbulanceUnit[]> {
-    return this.ambulanceUnitRepository.find({
-      relations: ['members'],
-      order: { name: 'ASC' },
-    });
+  async findAll(queryDto: QueryAmbulanceUnitsDto = {}) {
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = 'name',
+      sortOrder = 'ASC',
+      q,
+    } = queryDto;
+
+    const currentPage = Math.max(1, page);
+    const sanitizedLimit = Math.min(Math.max(1, limit), 100);
+
+    const queryBuilder = this.ambulanceUnitRepository
+      .createQueryBuilder('ambulanceUnit')
+      .leftJoinAndSelect('ambulanceUnit.members', 'member');
+
+    if (q?.trim()) {
+      queryBuilder.andWhere('LOWER(ambulanceUnit.name) LIKE :name', {
+        name: `%${q.trim().toLowerCase()}%`,
+      });
+    }
+
+    const allowedFields = ['name', 'createdAt'];
+    const column = allowedFields.includes(sortBy) ? sortBy : 'name';
+    queryBuilder.addOrderBy(`ambulanceUnit.${column}`, sortOrder === 'DESC' ? 'DESC' : 'ASC');
+
+    const skip = (currentPage - 1) * sanitizedLimit;
+    queryBuilder.skip(skip).take(sanitizedLimit);
+
+    const [data, total] = await queryBuilder.getManyAndCount();
+
+    return {
+      data,
+      total,
+      page: currentPage,
+      limit: sanitizedLimit,
+      totalPages: Math.ceil(total / sanitizedLimit),
+    };
   }
 
   async search(dto: SearchAmbulanceUnitDto): Promise<AmbulanceUnit[]> {
@@ -92,6 +127,22 @@ export class AmbulanceUnitsService {
     ]);
 
     return this.findOne(savedUnit.id);
+  }
+
+  async deleteUnit(id: string): Promise<void> {
+    const unit = await this.findOne(id);
+
+    const activeUsersCount = await this.userRepository.count({
+      where: { activeAmbulanceUnit: { id } },
+    });
+
+    if (activeUsersCount > 0) {
+      throw new ConflictException(
+        'Cannot delete unit with active associations',
+      );
+    }
+
+    await this.ambulanceUnitRepository.remove(unit);
   }
 
   async setActiveUnit(user: User, unitId: string): Promise<User> {
