@@ -1,7 +1,9 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
   Param,
   Patch,
   Post,
@@ -18,6 +20,7 @@ import { User, UserRole } from 'src/users/entities/user.entity';
 import { CreateAmbulanceUnitDto } from './dto/create-ambulance-unit.dto';
 import { UpdateAmbulanceUnitDto } from './dto/update-ambulance-unit.dto';
 import { SearchAmbulanceUnitDto } from './dto/search-ambulance-unit.dto';
+import { QueryAmbulanceUnitsDto } from './dto/query-ambulance-units.dto';
 
 @Controller('ambulance-units')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -46,8 +49,23 @@ export class AmbulanceUnitsController {
 
   @Get()
   @Roles(UserRole.ADMIN, UserRole.DISPATCHER)
-  findAll() {
-    return this.ambulanceUnitsService.findAll();
+  findAll(
+    @Query(
+      new ValidationPipe({
+        transform: true,
+        transformOptions: { enableImplicitConversion: true },
+      }),
+    )
+    query: QueryAmbulanceUnitsDto,
+  ) {
+    return this.ambulanceUnitsService.findAll(query);
+  }
+
+  @Delete(':id')
+  @Roles(UserRole.ADMIN)
+  @HttpCode(204)
+  delete(@Param('id') id: string) {
+    return this.ambulanceUnitsService.deleteUnit(id);
   }
 
   @Get(':id')
