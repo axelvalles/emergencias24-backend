@@ -58,9 +58,10 @@ describe('TicketsGateway auth and room authorization', () => {
     jwtService.verify.mockReturnValue({ sub: 'user-1' });
     usersService.findOne.mockResolvedValue({
       id: 'user-1',
-      role: UserRole.OPERATOR,
-      email: 'operator@example.com',
+      role: UserRole.DISPATCHER,
+      email: 'dispatcher@example.com',
       status: UserStatus.ACTIVE,
+      activeAmbulanceUnit: null,
     });
 
     await gateway.handleConnection(socket as never);
@@ -71,8 +72,9 @@ describe('TicketsGateway auth and room authorization', () => {
     expect(socket.join).toHaveBeenCalledWith('tickets');
     expect(socket.data.user).toEqual({
       id: 'user-1',
-      role: UserRole.OPERATOR,
-      email: 'operator@example.com',
+      role: UserRole.DISPATCHER,
+      email: 'dispatcher@example.com',
+      activeAmbulanceUnitId: null,
     });
   });
 
@@ -86,6 +88,7 @@ describe('TicketsGateway auth and room authorization', () => {
       role: UserRole.ADMIN,
       email: 'admin@example.com',
       status: UserStatus.INACTIVE,
+      activeAmbulanceUnit: null,
     });
 
     await gateway.handleConnection(socket as never);
@@ -117,6 +120,24 @@ describe('TicketsGateway auth and room authorization', () => {
       event: 'joined-tickets-room',
       data: 'Successfully joined tickets room',
     });
+  });
+
+  it('joins the active ambulance unit room for ambulance users', async () => {
+    const socket = makeSocket();
+    socket.handshake.auth = { token: 'jwt-token' };
+
+    jwtService.verify.mockReturnValue({ sub: 'ambulance-1' });
+    usersService.findOne.mockResolvedValue({
+      id: 'ambulance-1',
+      role: UserRole.AMBULANCE,
+      email: 'ambulance@example.com',
+      status: UserStatus.ACTIVE,
+      activeAmbulanceUnit: { id: 'unit-123' },
+    });
+
+    await gateway.handleConnection(socket as never);
+
+    expect(socket.join).toHaveBeenCalledWith('tickets:ambulance-unit:unit-123');
   });
 
   it('disconnects room leave when user is missing', () => {

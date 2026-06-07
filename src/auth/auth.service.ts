@@ -10,6 +10,7 @@ import { User, UserStatus } from '../users/entities/user.entity';
 import { LoginDto } from './dto/login.dto';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
+import { UserRole } from 'src/users/entities/user.entity';
 
 @Injectable()
 export class AuthService {
@@ -29,7 +30,10 @@ export class AuthService {
     const { email, password } = loginDto;
 
     // Find user by email
-    const user = await this.userRepository.findOne({ where: { email } });
+    const user = await this.userRepository.findOne({
+      where: { email },
+      relations: ['ambulanceUnits', 'activeAmbulanceUnit'],
+    });
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -53,6 +57,8 @@ export class AuthService {
     user.lastLogin = new Date();
     await this.userRepository.save(user);
 
+    await this.ensureActiveAmbulanceUnit(user);
+
     // Generate JWT token
     const payload = { sub: user.id, email: user.email, role: user.role };
     const accessToken = this.jwtService.sign(payload);
@@ -65,9 +71,45 @@ export class AuthService {
   }
 
   async validateUser(userId: string): Promise<User | null> {
-    return this.userRepository.findOne({
+    const user = await this.userRepository.findOne({
       where: { id: userId, status: UserStatus.ACTIVE },
+      relations: ['ambulanceUnits', 'activeAmbulanceUnit'],
     });
+
+    if (!user) {
+      return null;
+    }
+
+    return this.ensureActiveAmbulanceUnit(user);
+  }
+
+  private async ensureActiveAmbulanceUnit(user: User): Promise<User> {
+    if (user.role !== UserRole.AMBULANCE) {
+      if (user.activeAmbulanceUnit) {
+        user.activeAmbulanceUnit = null;
+        return this.userRepository.save(user);
+      }
+
+      return user;
+    }
+
+    const hasActiveUnit = user.activeAmbulanceUnit
+      ? user.ambulanceUnits.some(
+          (unit) => unit.id === user.activeAmbulanceUnit?.id,
+        )
+      : false;
+
+    if (user.ambulanceUnits.length === 1) {
+      user.activeAmbulanceUnit = user.ambulanceUnits[0];
+      return this.userRepository.save(user);
+    }
+
+    if (!hasActiveUnit && user.activeAmbulanceUnit) {
+      user.activeAmbulanceUnit = null;
+      return this.userRepository.save(user);
+    }
+
+    return user;
   }
 
   async forgotPassword(email: string): Promise<void> {

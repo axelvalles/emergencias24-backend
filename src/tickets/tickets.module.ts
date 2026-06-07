@@ -8,11 +8,13 @@ import { TicketsGateway } from './tickets.gateway';
 import { Ticket } from './entities/ticket.entity';
 import { TicketStatusHistory } from './entities/ticket-status-history.entity';
 import { UsersModule } from 'src/users/users.module';
+import { AmbulanceUnitsModule } from 'src/ambulance-units/ambulance-units.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Ticket, TicketStatusHistory]),
     UsersModule,
+    AmbulanceUnitsModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({

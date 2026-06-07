@@ -4,6 +4,14 @@ export class CreateMunicipalityPricing1780777200000 implements MigrationInterfac
   name = 'CreateMunicipalityPricing1780777200000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    const hasMunicipalityPricingTable = await queryRunner.hasTable(
+      'municipality_pricing',
+    );
+
+    if (hasMunicipalityPricingTable) {
+      return;
+    }
+
     await queryRunner.query(
       `CREATE TABLE "municipality_pricing" ("id" uuid NOT NULL, "municipality" character varying(100) NOT NULL, "displayOrder" integer NOT NULL, "homeCarePrice" numeric(10,2) NOT NULL, "ambulancePrice" numeric(10,2) NOT NULL, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_9f0fb2962576294d60ed34353e8" PRIMARY KEY ("id"))`,
     );

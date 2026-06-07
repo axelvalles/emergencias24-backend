@@ -1,7 +1,9 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class RemoveCancellationReason1748890000000 implements MigrationInterface {
-  name = 'RemoveCancellationReason1748890000000';
+export class RemoveCancellationReason1780820000000
+  implements MigrationInterface
+{
+  name = 'RemoveCancellationReason1780820000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
@@ -11,7 +13,7 @@ export class RemoveCancellationReason1748890000000 implements MigrationInterface
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
-      ALTER TABLE "tickets" ADD COLUMN "cancellationReason" text
+      ALTER TABLE "tickets" ADD COLUMN IF NOT EXISTS "cancellationReason" text
     `);
   }
 }

@@ -40,7 +40,7 @@ export class QueryTicketsDto {
 
   @IsOptional()
   @IsString()
-  assignedTo?: string;
+  assignedUnitId?: string;
 
   @IsOptional()
   @Type(() => Number)

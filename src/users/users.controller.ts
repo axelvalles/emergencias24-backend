@@ -32,7 +32,7 @@ export class UsersController {
   }
 
   @Get('search')
-  @Roles(UserRole.ADMIN, UserRole.OPERATOR)
+  @Roles(UserRole.ADMIN, UserRole.DISPATCHER)
   search(
     @Query(
       new ValidationPipe({

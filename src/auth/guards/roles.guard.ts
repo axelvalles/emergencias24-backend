@@ -6,10 +6,16 @@ const ROLE_HIERARCHY: Record<UserRole, readonly UserRole[]> = {
   [UserRole.SUPER_ADMIN]: [
     UserRole.SUPER_ADMIN,
     UserRole.ADMIN,
-    UserRole.OPERATOR,
+    UserRole.DISPATCHER,
+    UserRole.AMBULANCE,
   ],
-  [UserRole.ADMIN]: [UserRole.ADMIN],
-  [UserRole.OPERATOR]: [UserRole.OPERATOR],
+  [UserRole.ADMIN]: [
+    UserRole.ADMIN,
+    UserRole.DISPATCHER,
+    UserRole.AMBULANCE,
+  ],
+  [UserRole.DISPATCHER]: [UserRole.DISPATCHER],
+  [UserRole.AMBULANCE]: [UserRole.AMBULANCE],
 };
 
 @Injectable()

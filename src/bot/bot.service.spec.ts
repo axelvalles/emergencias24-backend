@@ -91,7 +91,7 @@ describe('BotService', () => {
     );
   });
 
-  it('returns to the main menu after completing a flow', async () => {
+  it('finishes a flow without re-sending the main menu template', async () => {
     sessionStoreMock.getSession.mockResolvedValue({
       currentState: BOT_STATES.IMMEDIATE_ATTENTION_WAITING_LOCATION,
       from: '584120000000',
@@ -118,13 +118,9 @@ describe('BotService', () => {
     );
     expect(messagingMock.sendMessage).toHaveBeenCalledWith(
       '584120000000',
-      expect.stringContaining('Ahora te mostraré el menú principal'),
+      expect.stringContaining('Puedes escribir "menu" para realizar otra solicitud'),
     );
-    expect(messagingMock.sendTemplate).toHaveBeenCalledWith(
-      '584120000000',
-      expect.any(String),
-      { name: 'Ana' },
-    );
+    expect(messagingMock.sendTemplate).not.toHaveBeenCalled();
     expect(sessionStoreMock.setSession).toHaveBeenCalledWith(
       '584120000000',
       expect.objectContaining({

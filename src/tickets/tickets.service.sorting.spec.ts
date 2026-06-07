@@ -20,12 +20,12 @@ describe('TicketsService sorting', () => {
     };
     const historyRepository = {};
     const ticketsGateway = {};
-    const usersService = {};
+    const ambulanceUnitsService = {};
     const service = new TicketsService(
       ticketRepository as never,
       historyRepository as never,
       ticketsGateway as never,
-      usersService as never,
+      ambulanceUnitsService as never,
     );
 
     await service.findAll({ sortBy: 'status', sortOrder: 'ASC' });
@@ -40,12 +40,12 @@ describe('TicketsService sorting', () => {
     };
     const historyRepository = {};
     const ticketsGateway = {};
-    const usersService = {};
+    const ambulanceUnitsService = {};
     const service = new TicketsService(
       ticketRepository as never,
       historyRepository as never,
       ticketsGateway as never,
-      usersService as never,
+      ambulanceUnitsService as never,
     );
 
     await expect(

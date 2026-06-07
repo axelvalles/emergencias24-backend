@@ -46,7 +46,7 @@ export class PatientsController {
   }
 
   @Get()
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.DISPATCHER)
   findAll(
     @Query(
       new ValidationPipe({
@@ -60,13 +60,13 @@ export class PatientsController {
   }
 
   @Get(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.DISPATCHER)
   findOne(@Param('id') id: string) {
     return this.patientsService.findOne(id);
   }
 
   @Get('by-document/:document')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.DISPATCHER)
   findByDocument(@Param('document') document: string) {
     return this.patientsService.findByDocument(document);
   }

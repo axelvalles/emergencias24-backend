@@ -22,9 +22,11 @@ export const BOT_MESSAGES = {
   TELEMEDICINE_ID:
     'Para continuar con la telemedicina, por favor, indícame tu número de Cédula de Identidad.',
   LABORATORY_TESTS: '¿Qué pruebas deseas realizar?',
+  STUDY_TRANSFER_CONFIRMATION:
+    'Perfecto. Hemos recibido tu solicitud para el traslado por realización de estudios. Un operador se comunicará contigo para coordinar el servicio y compartirte el precio.',
   MEDICAL_OTHER: 'Escribe la especialidad que necesitas.',
   FLOW_COMPLETED_MENU:
-    'Listo. Ahora te mostraré el menú principal por si necesitas otra gestión.',
+    'Listo. Puedes escribir "menu" para realizar otra solicitud.',
 } as const;
 
 const PREVIOUS_STATE_BY_CURRENT: Partial<Record<BotStates, BotStates>> = {

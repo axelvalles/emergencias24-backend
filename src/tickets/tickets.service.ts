@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -10,10 +11,11 @@ import { TicketStatusHistory } from './entities/ticket-status-history.entity';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { QueryTicketsDto } from './dto/query-tickets.dto';
 import { TicketsGateway } from './tickets.gateway';
-import { UsersService } from '../users/users.service';
-import { User } from 'src/users/entities/user.entity';
+import { User, UserRole } from 'src/users/entities/user.entity';
 import { Patient } from 'src/patients/entities/patient.entity';
 import { applyGlobalSearch } from '../common/query/apply-global-search';
+import { AmbulanceUnitsService } from 'src/ambulance-units/ambulance-units.service';
+import { AmbulanceUnit } from 'src/ambulance-units/entities/ambulance-unit.entity';
 
 const TICKET_SORT_COLUMN_MAP: Record<string, string> = {
   createdAt: 'ticket.createdAt',
@@ -31,7 +33,7 @@ export class TicketsService {
     @InjectRepository(TicketStatusHistory)
     private readonly historyRepository: Repository<TicketStatusHistory>,
     private readonly ticketsGateway: TicketsGateway,
-    private readonly usersService: UsersService,
+    private readonly ambulanceUnitsService: AmbulanceUnitsService,
   ) {}
 
   async create(dto: CreateTicketDto, patient?: Patient): Promise<Ticket> {
@@ -48,10 +50,13 @@ export class TicketsService {
     return savedTicket;
   }
 
-  async findByReferenceNumber(referenceNumber: number): Promise<Ticket> {
+  async findByReferenceNumber(
+    referenceNumber: number,
+    user?: User,
+  ): Promise<Ticket> {
     const ticket = await this.ticketRepository.findOne({
       where: { referenceNumber },
-      relations: ['patient', 'assignedUser'],
+      relations: ['patient', 'assignedUnit'],
     });
 
     if (!ticket) {
@@ -60,10 +65,12 @@ export class TicketsService {
       );
     }
 
+    this.assertCanAccessTicket(ticket, user);
+
     return ticket;
   }
 
-  async findAll(queryDto: QueryTicketsDto = {}): Promise<{
+  async findAll(queryDto: QueryTicketsDto = {}, user?: User): Promise<{
     data: Ticket[];
     total: number;
     page: number;
@@ -84,7 +91,7 @@ export class TicketsService {
     queryBuilder.leftJoinAndSelect('ticket.patient', 'patient');
 
     // Aplicar filtros
-    this.applyFilters(queryBuilder, filters);
+    this.applyFilters(queryBuilder, filters, user);
 
     // Aplicar ordenamiento
     const sortColumn = this.getTicketSortColumn(sortBy);
@@ -105,15 +112,17 @@ export class TicketsService {
     };
   }
 
-  async findOne(id: string): Promise<Ticket> {
+  async findOne(id: string, user?: User): Promise<Ticket> {
     const ticket = await this.ticketRepository.findOne({
       where: { id },
-      relations: ['patient', 'assignedUser'],
+      relations: ['patient', 'assignedUnit'],
     });
 
     if (!ticket) {
       throw new NotFoundException(`Ticket with ID ${id} not found`);
     }
+
+    this.assertCanAccessTicket(ticket, user);
 
     return ticket;
   }
@@ -125,22 +134,29 @@ export class TicketsService {
 
   async assignTicket(
     id: string,
-    assignedTo: string,
+    ambulanceUnitId: string,
     changedBy?: User,
     comment?: string,
   ): Promise<Ticket> {
     const ticket = await this.findOne(id);
-    const user = await this.usersService.findOne(assignedTo);
+    const ambulanceUnit = await this.ambulanceUnitsService.findOne(
+      ambulanceUnitId,
+    );
 
-    if (!user) {
-      throw new NotFoundException(`User with ID ${assignedTo} not found`);
+    if (ambulanceUnit.members.length === 0) {
+      throw new BadRequestException(
+        'Tickets can only be assigned to ambulance units with at least one member',
+      );
     }
 
-    ticket.assignedUser = user;
+    ticket.assignedUnit = ambulanceUnit;
     ticket.assignedAt = new Date();
     ticket.status = TicketStatus.ASSIGNED;
 
     const savedTicket = await this.ticketRepository.save(ticket);
+
+    this.ticketsGateway.emitTicketUpdated(savedTicket);
+    this.ticketsGateway.emitTicketAssigned(savedTicket);
 
     await this.createHistory(
       savedTicket,
@@ -153,7 +169,7 @@ export class TicketsService {
   }
 
   async startTicket(id: string, user: User, comment?: string): Promise<Ticket> {
-    const ticket = await this.findOne(id);
+    const ticket = await this.findOne(id, user);
 
     if (ticket.status !== TicketStatus.ASSIGNED) {
       throw new BadRequestException('Only assigned tickets can be started');
@@ -162,6 +178,8 @@ export class TicketsService {
     ticket.status = TicketStatus.IN_PROGRESS;
 
     const savedTicket = await this.ticketRepository.save(ticket);
+
+    this.ticketsGateway.emitTicketUpdated(savedTicket);
 
     await this.createHistory(
       savedTicket,
@@ -178,12 +196,15 @@ export class TicketsService {
     changedBy?: User,
     comment?: string,
   ): Promise<Ticket> {
-    const ticket = await this.findOne(id);
+    const ticket = await this.findOne(id, changedBy);
 
     ticket.status = TicketStatus.COMPLETED;
     ticket.completedAt = new Date();
 
     const savedTicket = await this.ticketRepository.save(ticket);
+
+    this.ticketsGateway.emitTicketUpdated(savedTicket);
+    this.ticketsGateway.emitTicketCompleted(savedTicket);
 
     await this.createHistory(
       savedTicket,
@@ -195,12 +216,14 @@ export class TicketsService {
     return savedTicket;
   }
 
-  async updateNote(id: string, note: string): Promise<Ticket> {
-    const ticket = await this.findOne(id);
+  async updateNote(id: string, note: string, user?: User): Promise<Ticket> {
+    const ticket = await this.findOne(id, user);
 
     ticket.note = note;
 
     await this.ticketRepository.save(ticket);
+
+    this.ticketsGateway.emitTicketUpdated(ticket);
 
     return ticket;
   }
@@ -210,11 +233,14 @@ export class TicketsService {
     changedBy?: User,
     comment?: string,
   ): Promise<Ticket> {
-    const ticket = await this.findOne(id);
+    const ticket = await this.findOne(id, changedBy);
 
     ticket.status = TicketStatus.CANCELLED;
 
     const savedTicket = await this.ticketRepository.save(ticket);
+
+    this.ticketsGateway.emitTicketUpdated(savedTicket);
+    this.ticketsGateway.emitTicketCancelled(savedTicket);
 
     await this.createHistory(
       savedTicket,
@@ -226,8 +252,8 @@ export class TicketsService {
     return savedTicket;
   }
 
-  async getHistory(id: string): Promise<TicketStatusHistory[]> {
-    await this.findOne(id);
+  async getHistory(id: string, user?: User): Promise<TicketStatusHistory[]> {
+    await this.findOne(id, user);
 
     return this.historyRepository.find({
       where: { ticket: { id } },
@@ -254,6 +280,7 @@ export class TicketsService {
   private applyFilters(
     queryBuilder: SelectQueryBuilder<Ticket>,
     filters: Partial<QueryTicketsDto>,
+    user?: User,
   ): void {
     applyGlobalSearch(queryBuilder, {
       query: filters.q,
@@ -301,9 +328,22 @@ export class TicketsService {
       });
     }
 
-    if (filters.assignedTo) {
-      queryBuilder.andWhere('ticket.assignedUser = :assignedTo', {
-        assignedTo: filters.assignedTo,
+    if (filters.assignedUnitId) {
+      queryBuilder.andWhere('ticket.assignedUnit = :assignedUnitId', {
+        assignedUnitId: filters.assignedUnitId,
+      });
+    }
+
+    if (user?.role === UserRole.AMBULANCE) {
+      if ((user.ambulanceUnits ?? []).length === 0) {
+        queryBuilder.andWhere('1 = 0');
+        return;
+      }
+
+      const activeUnit = this.getRequiredActiveUnit(user);
+
+      queryBuilder.andWhere('ticket.assignedUnit = :activeAmbulanceUnitId', {
+        activeAmbulanceUnitId: activeUnit.id,
       });
     }
 
@@ -340,5 +380,45 @@ export class TicketsService {
     }
 
     return sortColumn;
+  }
+
+  private assertCanAccessTicket(ticket: Ticket, user?: User): void {
+    if (!user || user.role !== UserRole.AMBULANCE) {
+      return;
+    }
+
+    const activeUnit = this.getRequiredActiveUnit(user);
+
+    if (ticket.assignedUnit?.id !== activeUnit.id) {
+      throw new ForbiddenException(
+        'Ambulance users can only access tickets assigned to their active unit',
+      );
+    }
+  }
+
+  private getRequiredActiveUnit(user: User): AmbulanceUnit {
+    const ambulanceUnits = user.ambulanceUnits ?? [];
+
+    if (ambulanceUnits.length === 1) {
+      return ambulanceUnits[0];
+    }
+
+    if (!user.activeAmbulanceUnit) {
+      throw new ForbiddenException(
+        'Ambulance users must select an active ambulance unit first',
+      );
+    }
+
+    const belongsToActiveUnit = ambulanceUnits.some(
+      (unit) => unit.id === user.activeAmbulanceUnit?.id,
+    );
+
+    if (!belongsToActiveUnit) {
+      throw new ForbiddenException(
+        'The active ambulance unit is no longer assigned to the authenticated user',
+      );
+    }
+
+    return user.activeAmbulanceUnit;
   }
 }

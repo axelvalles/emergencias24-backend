@@ -6,14 +6,19 @@ import {
   BeforeInsert,
   PrimaryColumn,
   Index,
+  JoinColumn,
+  ManyToMany,
+  ManyToOne,
 } from 'typeorm';
 import { uuidv7 } from 'uuidv7';
 import { Exclude, Expose } from 'class-transformer';
+import { AmbulanceUnit } from 'src/ambulance-units/entities/ambulance-unit.entity';
 
 export enum UserRole {
   SUPER_ADMIN = 'super-admin',
   ADMIN = 'admin',
-  OPERATOR = 'operator',
+  DISPATCHER = 'dispatcher',
+  AMBULANCE = 'ambulance',
 }
 
 export enum UserStatus {
@@ -61,6 +66,16 @@ export class User {
     default: UserStatus.ACTIVE,
   })
   status: UserStatus;
+
+  @ManyToMany(() => AmbulanceUnit, (ambulanceUnit) => ambulanceUnit.members)
+  ambulanceUnits: AmbulanceUnit[];
+
+  @ManyToOne(() => AmbulanceUnit, (ambulanceUnit) => ambulanceUnit.activeUsers, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'activeAmbulanceUnitId' })
+  activeAmbulanceUnit?: AmbulanceUnit | null;
 
   @CreateDateColumn({ type: 'timestamp' })
   createdAt: Date;

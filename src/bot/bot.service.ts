@@ -131,12 +131,7 @@ export class BotService {
     if (requestedNextState === BOT_STATES.START) {
       await this.messaging.sendMessage(from, BOT_MESSAGES.FLOW_COMPLETED_MENU);
 
-      nextState = await sendPromptForState({
-        from,
-        profileName,
-        state: BOT_STATES.WAITING_MENU_OPTION,
-        services: { messaging: this.messaging },
-      });
+      nextState = BOT_STATES.WAITING_MENU_OPTION;
     }
 
     await this.sessionStore.setSession(from, {

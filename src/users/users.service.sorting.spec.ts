@@ -7,6 +7,8 @@ describe('UsersService sorting', () => {
     return {
       andWhere: jest.fn().mockReturnThis(),
 
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+
       addOrderBy: jest.fn().mockReturnThis(),
 
       skip: jest.fn().mockReturnThis(),
@@ -26,7 +28,12 @@ describe('UsersService sorting', () => {
       createQueryBuilder: jest.fn().mockReturnValue(qb),
     };
 
-    const service = new UsersService(userRepository as never);
+    const ambulanceUnitRepository = {};
+
+    const service = new UsersService(
+      userRepository as never,
+      ambulanceUnitRepository as never,
+    );
 
     await service.findAll({ sortBy: 'fullName', sortOrder: 'DESC' });
 
@@ -42,7 +49,12 @@ describe('UsersService sorting', () => {
       createQueryBuilder: jest.fn().mockReturnValue(qb),
     };
 
-    const service = new UsersService(userRepository as never);
+    const ambulanceUnitRepository = {};
+
+    const service = new UsersService(
+      userRepository as never,
+      ambulanceUnitRepository as never,
+    );
 
     await expect(
       service.findAll({ sortBy: 'unknownField' }),

@@ -10,7 +10,7 @@ import {
 } from 'typeorm';
 import { Patient } from '../../patients/entities/patient.entity';
 import { uuidv7 } from 'uuidv7';
-import { User } from 'src/users/entities/user.entity';
+import { AmbulanceUnit } from 'src/ambulance-units/entities/ambulance-unit.entity';
 
 export enum ServiceType {
   IMMEDIATE_ATTENTION = 'immediate_attention',
@@ -19,6 +19,7 @@ export enum ServiceType {
   MEDICAL_CONSULTATION = 'medical_consultation',
   AMBULANCE = 'ambulance',
   LABORATORY = 'laboratory',
+  STUDY_TRANSFER = 'study_transfer',
   APPOINTMENT = 'appointment',
   EQUIPMENT_RENTAL = 'equipment_rental',
   PLANS = 'plans',
@@ -40,7 +41,7 @@ export enum Priority {
 
 @Entity('tickets')
 @Index('IDX_TICKETS_STATUS_CREATED', ['status', 'createdAt'])
-@Index('IDX_TICKETS_ASSIGNED', ['assignedUser', 'status'])
+@Index('IDX_TICKETS_ASSIGNED', ['assignedUnit', 'status'])
 @Index('IDX_TICKETS_PATIENT', ['patient'])
 export class Ticket {
   @PrimaryColumn('uuid')
@@ -101,11 +102,11 @@ export class Ticket {
   @Column({ type: 'text', nullable: true })
   note?: string;
 
-  @ManyToOne(() => User, {
+  @ManyToOne(() => AmbulanceUnit, {
     nullable: true,
     onDelete: 'SET NULL',
   })
-  assignedUser?: User | null;
+  assignedUnit?: AmbulanceUnit | null;
 
   @Column({ type: 'timestamp', nullable: true })
   assignedAt?: Date;

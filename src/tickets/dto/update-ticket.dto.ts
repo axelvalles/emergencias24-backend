@@ -11,7 +11,7 @@ export class UpdateTicketDto extends PartialType(CreateTicketDto) {
 
   @IsOptional()
   @IsString()
-  assignedTo?: string;
+  assignedUnitId?: string;
 
   @IsOptional()
   @Type(() => Date)

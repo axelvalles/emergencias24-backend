@@ -31,7 +31,8 @@ export class TicketsGateway
   private static readonly ALLOWED_ROLES = new Set<UserRole>([
     UserRole.SUPER_ADMIN,
     UserRole.ADMIN,
-    UserRole.OPERATOR,
+    UserRole.DISPATCHER,
+    UserRole.AMBULANCE,
   ]);
 
   constructor(
@@ -47,10 +48,16 @@ export class TicketsGateway
 
   private static getAuthenticatedUser(
     client: Socket,
-  ): { role?: UserRole } | undefined {
+  ): { id?: string; role?: UserRole; activeAmbulanceUnitId?: string | null } | undefined {
     const data = client.data as Record<string, unknown>;
 
-    return data['user'] as { role?: UserRole } | undefined;
+    return data['user'] as
+      | { id?: string; role?: UserRole; activeAmbulanceUnitId?: string | null }
+      | undefined;
+  }
+
+  private static getAmbulanceUnitRoom(ambulanceUnitId: string): string {
+    return `tickets:ambulance-unit:${ambulanceUnitId}`;
   }
 
   afterInit() {
@@ -114,10 +121,9 @@ export class TicketsGateway
 
     data.user = {
       id: user.id,
-
       role: user.role,
-
       email: user.email,
+      activeAmbulanceUnitId: user.activeAmbulanceUnit?.id ?? null,
     };
   }
 
@@ -135,10 +141,20 @@ export class TicketsGateway
     }
 
     this.logger.log(`🟢 Client connected: ${client.id}`);
+    const user = TicketsGateway.getAuthenticatedUser(client);
 
-    // Por defecto, unimos al cliente a la sala "tickets"
+    if (user?.role === UserRole.AMBULANCE) {
+      if (user.activeAmbulanceUnitId) {
+        void client.join(
+          TicketsGateway.getAmbulanceUnitRoom(user.activeAmbulanceUnitId),
+        );
+        this.logger.log(
+          `Client ${client.id} joined ambulance unit room ${user.activeAmbulanceUnitId}`,
+        );
+      }
 
-    // para que reciba los broadcasts generales
+      return;
+    }
 
     void client.join('tickets');
 
@@ -181,6 +197,26 @@ export class TicketsGateway
       return;
     }
 
+    const user = TicketsGateway.getAuthenticatedUser(client);
+
+    if (user?.role === UserRole.AMBULANCE) {
+      if (user.activeAmbulanceUnitId) {
+        void client.join(
+          TicketsGateway.getAmbulanceUnitRoom(user.activeAmbulanceUnitId),
+        );
+
+        this.logger.log(
+          `Client ${client.id} joined ambulance unit room ${user.activeAmbulanceUnitId}`,
+        );
+      }
+
+      return {
+        event: 'joined-tickets-room',
+
+        data: 'Successfully joined tickets room',
+      };
+    }
+
     void client.join('tickets');
 
     this.logger.log(`Client ${client.id} joined tickets room`);
@@ -198,6 +234,26 @@ export class TicketsGateway
       client.disconnect(true);
 
       return;
+    }
+
+    const user = TicketsGateway.getAuthenticatedUser(client);
+
+    if (user?.role === UserRole.AMBULANCE) {
+      if (user.activeAmbulanceUnitId) {
+        void client.leave(
+          TicketsGateway.getAmbulanceUnitRoom(user.activeAmbulanceUnitId),
+        );
+
+        this.logger.log(
+          `Client ${client.id} left ambulance unit room ${user.activeAmbulanceUnitId}`,
+        );
+      }
+
+      return {
+        event: 'left-tickets-room',
+
+        data: 'Successfully left tickets room',
+      };
     }
 
     void client.leave('tickets');
@@ -230,6 +286,18 @@ export class TicketsGateway
       timestamp: new Date().toISOString(),
     });
 
+    const assignedUnitId = ticket.assignedUnit?.id;
+
+    if (assignedUnitId) {
+      this.server
+        .to(TicketsGateway.getAmbulanceUnitRoom(assignedUnitId))
+        .emit('ticket.updated', {
+          ticket,
+
+          timestamp: new Date().toISOString(),
+        });
+    }
+
     this.logger.log(`♻️ Ticket updated event emitted for ticket ${ticket.id}`);
   }
 
@@ -240,6 +308,18 @@ export class TicketsGateway
       timestamp: new Date().toISOString(),
     });
 
+    const assignedUnitId = ticket.assignedUnit?.id;
+
+    if (assignedUnitId) {
+      this.server
+        .to(TicketsGateway.getAmbulanceUnitRoom(assignedUnitId))
+        .emit('ticket.assigned', {
+          ticket,
+
+          timestamp: new Date().toISOString(),
+        });
+    }
+
     this.logger.log(`👤 Ticket assigned event emitted for ticket ${ticket.id}`);
   }
 
@@ -249,6 +329,17 @@ export class TicketsGateway
 
       timestamp: new Date().toISOString(),
     });
+
+    const assignedUnitId = ticket.assignedUnit?.id;
+
+    if (assignedUnitId) {
+      this.server
+        .to(TicketsGateway.getAmbulanceUnitRoom(assignedUnitId))
+        .emit('ticket.completed', {
+          ticket,
+          timestamp: new Date().toISOString(),
+        });
+    }
 
     this.logger.log(
       `✅ Ticket completed event emitted for ticket ${ticket.id}`,
@@ -261,6 +352,17 @@ export class TicketsGateway
 
       timestamp: new Date().toISOString(),
     });
+
+    const assignedUnitId = ticket.assignedUnit?.id;
+
+    if (assignedUnitId) {
+      this.server
+        .to(TicketsGateway.getAmbulanceUnitRoom(assignedUnitId))
+        .emit('ticket.cancelled', {
+          ticket,
+          timestamp: new Date().toISOString(),
+        });
+    }
 
     this.logger.log(
       `🚫 Ticket cancelled event emitted for ticket ${ticket.id}`,

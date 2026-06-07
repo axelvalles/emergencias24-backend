@@ -1,9 +1,12 @@
 import {
+  ArrayMaxSize,
   IsEmail,
   IsEnum,
   IsNotEmpty,
   IsOptional,
+  IsArray,
   IsString,
+  IsUUID,
   MinLength,
 } from 'class-validator';
 import { UserRole } from '../entities/user.entity';
@@ -31,4 +34,10 @@ export class CreateUserDto {
 
   @IsEnum(UserRole)
   role: UserRole;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(100)
+  @IsUUID('4', { each: true })
+  ambulanceUnitIds?: string[];
 }

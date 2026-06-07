@@ -18,6 +18,7 @@ import { twilioConfig } from './config/twilio.config';
 import { dbConfig, typeOrmFactory } from './config/db.config';
 import { envSchema } from './config/configuration';
 import { MunicipalityPricingModule } from './municipality-pricing/municipality-pricing.module';
+import { AmbulanceUnitsModule } from './ambulance-units/ambulance-units.module';
 
 // const isDevelopment = process.env.NODE_ENV !== 'production';
 
@@ -69,6 +70,7 @@ import { MunicipalityPricingModule } from './municipality-pricing/municipality-p
     PlansModule,
     CompaniesModule,
     MunicipalityPricingModule,
+    AmbulanceUnitsModule,
     BotModule,
     PatientsModule,
     UsersModule,

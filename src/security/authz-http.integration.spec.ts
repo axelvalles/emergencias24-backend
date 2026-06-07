@@ -158,8 +158,8 @@ describe('AuthZ HTTP integration matrix', () => {
     await request(app.getHttpServer()).get('/tickets').expect(401);
   });
 
-  it('returns 200 for operator on allowed read endpoints', async () => {
-    authState.currentUser = { id: 'operator-1', role: UserRole.OPERATOR };
+  it('returns 200 for dispatcher on allowed read endpoints', async () => {
+    authState.currentUser = { id: 'dispatcher-1', role: UserRole.DISPATCHER };
 
     await request(app.getHttpServer()).get('/companies').expect(200);
     await request(app.getHttpServer()).get('/plans').expect(200);
@@ -167,8 +167,8 @@ describe('AuthZ HTTP integration matrix', () => {
     await request(app.getHttpServer()).get('/tickets').expect(200);
   });
 
-  it('returns 403 for operator on admin-only endpoint', async () => {
-    authState.currentUser = { id: 'operator-1', role: UserRole.OPERATOR };
+  it('returns 403 for dispatcher on admin-only endpoint', async () => {
+    authState.currentUser = { id: 'dispatcher-1', role: UserRole.DISPATCHER };
 
     await request(app.getHttpServer())
       .delete('/companies/019e79f9-9941-758b-9bd2-18f4d1da9148')

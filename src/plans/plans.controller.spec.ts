@@ -23,10 +23,10 @@ describe('PlansController security metadata', () => {
     ).toEqual([UserRole.ADMIN]);
     expect(
       Reflect.getMetadata(ROLES_KEY, PlansController.prototype.findAll),
-    ).toEqual([UserRole.ADMIN, UserRole.OPERATOR]);
+    ).toEqual([UserRole.ADMIN, UserRole.DISPATCHER]);
     expect(
       Reflect.getMetadata(ROLES_KEY, PlansController.prototype.findOne),
-    ).toEqual([UserRole.ADMIN, UserRole.OPERATOR]);
+    ).toEqual([UserRole.ADMIN, UserRole.DISPATCHER]);
     expect(
       Reflect.getMetadata(ROLES_KEY, PlansController.prototype.update),
     ).toEqual([UserRole.ADMIN]);

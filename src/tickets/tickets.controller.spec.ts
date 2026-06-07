@@ -20,39 +20,39 @@ describe('TicketsController security metadata', () => {
   it('applies expected roles per endpoint', () => {
     expect(
       Reflect.getMetadata(ROLES_KEY, TicketsController.prototype.create),
-    ).toEqual([UserRole.ADMIN, UserRole.OPERATOR]);
+    ).toEqual([UserRole.ADMIN, UserRole.DISPATCHER]);
     expect(
       Reflect.getMetadata(ROLES_KEY, TicketsController.prototype.findAll),
-    ).toEqual([UserRole.ADMIN, UserRole.OPERATOR]);
+    ).toEqual([UserRole.ADMIN, UserRole.DISPATCHER, UserRole.AMBULANCE]);
     expect(
       Reflect.getMetadata(ROLES_KEY, TicketsController.prototype.findOne),
-    ).toEqual([UserRole.ADMIN, UserRole.OPERATOR]);
+    ).toEqual([UserRole.ADMIN, UserRole.DISPATCHER, UserRole.AMBULANCE]);
     expect(
       Reflect.getMetadata(ROLES_KEY, TicketsController.prototype.getHistory),
-    ).toEqual([UserRole.ADMIN, UserRole.OPERATOR]);
+    ).toEqual([UserRole.ADMIN, UserRole.DISPATCHER, UserRole.AMBULANCE]);
     expect(
       Reflect.getMetadata(
         ROLES_KEY,
         TicketsController.prototype.findByReferenceNumber,
       ),
-    ).toEqual([UserRole.ADMIN, UserRole.OPERATOR]);
+    ).toEqual([UserRole.ADMIN, UserRole.DISPATCHER, UserRole.AMBULANCE]);
     expect(
       Reflect.getMetadata(ROLES_KEY, TicketsController.prototype.assignTicket),
-    ).toEqual([UserRole.ADMIN, UserRole.OPERATOR]);
+    ).toEqual([UserRole.ADMIN, UserRole.DISPATCHER]);
     expect(
       Reflect.getMetadata(ROLES_KEY, TicketsController.prototype.startTicket),
-    ).toEqual([UserRole.ADMIN, UserRole.OPERATOR]);
+    ).toEqual([UserRole.ADMIN, UserRole.DISPATCHER, UserRole.AMBULANCE]);
     expect(
       Reflect.getMetadata(
         ROLES_KEY,
         TicketsController.prototype.completeTicket,
       ),
-    ).toEqual([UserRole.ADMIN, UserRole.OPERATOR]);
+    ).toEqual([UserRole.ADMIN, UserRole.DISPATCHER, UserRole.AMBULANCE]);
     expect(
       Reflect.getMetadata(ROLES_KEY, TicketsController.prototype.updateNote),
-    ).toEqual([UserRole.ADMIN, UserRole.OPERATOR]);
+    ).toEqual([UserRole.ADMIN, UserRole.DISPATCHER, UserRole.AMBULANCE]);
     expect(
       Reflect.getMetadata(ROLES_KEY, TicketsController.prototype.cancelTicket),
-    ).toEqual([UserRole.ADMIN, UserRole.OPERATOR]);
+    ).toEqual([UserRole.ADMIN, UserRole.DISPATCHER]);
   });
 });

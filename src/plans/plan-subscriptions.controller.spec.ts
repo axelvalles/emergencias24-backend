@@ -21,25 +21,25 @@ describe('PlanSubscriptionsController security metadata', () => {
         ROLES_KEY,
         PlanSubscriptionsController.prototype.create,
       ),
-    ).toEqual([UserRole.ADMIN, UserRole.OPERATOR]);
+    ).toEqual([UserRole.ADMIN, UserRole.DISPATCHER]);
     expect(
       Reflect.getMetadata(
         ROLES_KEY,
         PlanSubscriptionsController.prototype.findAll,
       ),
-    ).toEqual([UserRole.ADMIN, UserRole.OPERATOR]);
+    ).toEqual([UserRole.ADMIN, UserRole.DISPATCHER]);
     expect(
       Reflect.getMetadata(
         ROLES_KEY,
         PlanSubscriptionsController.prototype.findOne,
       ),
-    ).toEqual([UserRole.ADMIN, UserRole.OPERATOR]);
+    ).toEqual([UserRole.ADMIN, UserRole.DISPATCHER]);
     expect(
       Reflect.getMetadata(
         ROLES_KEY,
         PlanSubscriptionsController.prototype.update,
       ),
-    ).toEqual([UserRole.ADMIN, UserRole.OPERATOR]);
+    ).toEqual([UserRole.ADMIN, UserRole.DISPATCHER]);
     expect(
       Reflect.getMetadata(
         ROLES_KEY,
@@ -51,30 +51,30 @@ describe('PlanSubscriptionsController security metadata', () => {
         ROLES_KEY,
         PlanSubscriptionsController.prototype.assignFamilyMember,
       ),
-    ).toEqual([UserRole.ADMIN, UserRole.OPERATOR]);
+    ).toEqual([UserRole.ADMIN, UserRole.DISPATCHER]);
     expect(
       Reflect.getMetadata(
         ROLES_KEY,
         PlanSubscriptionsController.prototype.getFamilyMembers,
       ),
-    ).toEqual([UserRole.ADMIN, UserRole.OPERATOR]);
+    ).toEqual([UserRole.ADMIN, UserRole.DISPATCHER]);
     expect(
       Reflect.getMetadata(
         ROLES_KEY,
         PlanSubscriptionsController.prototype.removeFamilyMember,
       ),
-    ).toEqual([UserRole.ADMIN, UserRole.OPERATOR]);
+    ).toEqual([UserRole.ADMIN, UserRole.DISPATCHER]);
     expect(
       Reflect.getMetadata(
         ROLES_KEY,
         PlanSubscriptionsController.prototype.findActiveByPatientId,
       ),
-    ).toEqual([UserRole.ADMIN, UserRole.OPERATOR]);
+    ).toEqual([UserRole.ADMIN, UserRole.DISPATCHER]);
     expect(
       Reflect.getMetadata(
         ROLES_KEY,
         PlanSubscriptionsController.prototype.validateFamilyMember,
       ),
-    ).toEqual([UserRole.ADMIN, UserRole.OPERATOR]);
+    ).toEqual([UserRole.ADMIN, UserRole.DISPATCHER]);
   });
 });

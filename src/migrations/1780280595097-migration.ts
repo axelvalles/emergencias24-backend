@@ -4,6 +4,12 @@ export class Migration1780280595097 implements MigrationInterface {
   name = 'Migration1780280595097';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    const hasUsersTable = await queryRunner.hasTable('users');
+
+    if (hasUsersTable) {
+      return;
+    }
+
     await queryRunner.query(
       `CREATE TYPE "public"."users_role_enum" AS ENUM('admin', 'operator')`,
     );

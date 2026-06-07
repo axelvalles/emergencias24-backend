@@ -30,25 +30,25 @@ export class PlanSubscriptionsController {
   ) {}
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.OPERATOR)
+  @Roles(UserRole.ADMIN, UserRole.DISPATCHER)
   create(@Body() createPlanSubscriptionDto: CreatePlanSubscriptionDto) {
     return this.planSubscriptionsService.create(createPlanSubscriptionDto);
   }
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.OPERATOR)
+  @Roles(UserRole.ADMIN, UserRole.DISPATCHER)
   findAll(@Query() query: QueryPlanSubscriptionsDto) {
     return this.planSubscriptionsService.findAll(query);
   }
 
   @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.OPERATOR)
+  @Roles(UserRole.ADMIN, UserRole.DISPATCHER)
   findOne(@Param('id') id: string) {
     return this.planSubscriptionsService.findOne(id);
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN, UserRole.OPERATOR)
+  @Roles(UserRole.ADMIN, UserRole.DISPATCHER)
   update(
     @Param('id') id: string,
     @Body() updatePlanSubscriptionDto: UpdatePlanSubscriptionDto,
@@ -67,7 +67,7 @@ export class PlanSubscriptionsController {
    * Creates a new subscription for the family member linked to the main subscriber.
    */
   @Post('family-members')
-  @Roles(UserRole.ADMIN, UserRole.OPERATOR)
+  @Roles(UserRole.ADMIN, UserRole.DISPATCHER)
   assignFamilyMember(@Body() assignFamilyMemberDto: AssignFamilyMemberDto) {
     return this.planSubscriptionsService.assignFamilyMember(
       assignFamilyMemberDto,
@@ -78,7 +78,7 @@ export class PlanSubscriptionsController {
    * Gets all family members assigned to a family plan subscription.
    */
   @Get(':id/family-members')
-  @Roles(UserRole.ADMIN, UserRole.OPERATOR)
+  @Roles(UserRole.ADMIN, UserRole.DISPATCHER)
   getFamilyMembers(@Param('id') id: string) {
     return this.planSubscriptionsService.getFamilyMembers(id);
   }
@@ -89,7 +89,7 @@ export class PlanSubscriptionsController {
    */
   @Delete('family-members/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @Roles(UserRole.ADMIN, UserRole.OPERATOR)
+  @Roles(UserRole.ADMIN, UserRole.DISPATCHER)
   removeFamilyMember(@Param('id') id: string) {
     return this.planSubscriptionsService.removeFamilyMember(id);
   }
@@ -98,7 +98,7 @@ export class PlanSubscriptionsController {
    * Gets all active plan subscriptions for a patient.
    */
   @Get('patient/:patientId/active')
-  @Roles(UserRole.ADMIN, UserRole.OPERATOR)
+  @Roles(UserRole.ADMIN, UserRole.DISPATCHER)
   findActiveByPatientId(@Param('patientId') patientId: string) {
     return this.planSubscriptionsService.findActiveByPatientId(patientId);
   }
@@ -108,7 +108,7 @@ export class PlanSubscriptionsController {
    * Checks if they are not already part of any family plan.
    */
   @Post('validate-family-member')
-  @Roles(UserRole.ADMIN, UserRole.OPERATOR)
+  @Roles(UserRole.ADMIN, UserRole.DISPATCHER)
   validateFamilyMember(
     @Body() validateFamilyMemberDto: ValidateFamilyMemberDto,
   ) {

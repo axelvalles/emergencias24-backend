@@ -1,13 +1,14 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder } from 'typeorm';
-import { User, UserStatus } from './entities/user.entity';
+import { In, Repository, SelectQueryBuilder } from 'typeorm';
+import { User, UserRole, UserStatus } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { QueryUserDto } from './dto/query-user.dto';
 import { SearchUserDto } from './dto/search-user.dto';
 import { applyGlobalSearch } from '../common/query/apply-global-search';
 import * as bcrypt from 'bcrypt';
+import { AmbulanceUnit } from 'src/ambulance-units/entities/ambulance-unit.entity';
 
 const USER_SORT_COLUMN_MAP: Record<string, string[]> = {
   createdAt: ['user.createdAt'],
@@ -25,6 +26,8 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(AmbulanceUnit)
+    private readonly ambulanceUnitRepository: Repository<AmbulanceUnit>,
   ) {}
 
   async encryptPassword(password: string): Promise<string> {
@@ -36,9 +39,13 @@ export class UsersService {
     const user = this.userRepository.create(createUserDto);
     const passwordHash = await this.encryptPassword(createUserDto.password);
     user.passwordHash = passwordHash;
+    user.ambulanceUnits = await this.resolveAmbulanceUnits(
+      createUserDto.ambulanceUnitIds,
+    );
+    this.syncAmbulanceRoleState(user);
     const savedUser = await this.userRepository.save(user);
 
-    return savedUser;
+    return this.findOneOrFail(savedUser.id);
   }
 
   async search(searchDto: SearchUserDto): Promise<User[]> {
@@ -115,6 +122,11 @@ export class UsersService {
       'user.updatedAt',
       'user.lastLogin',
     ]);
+    queryBuilder.leftJoinAndSelect('user.ambulanceUnits', 'ambulanceUnits');
+    queryBuilder.leftJoinAndSelect(
+      'user.activeAmbulanceUnit',
+      'activeAmbulanceUnit',
+    );
 
     const [data, total] = await queryBuilder.getManyAndCount();
 
@@ -130,11 +142,15 @@ export class UsersService {
   async findOne(id: string): Promise<User | null> {
     return this.userRepository.findOne({
       where: { id },
+      relations: ['ambulanceUnits', 'activeAmbulanceUnit'],
     });
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    return this.userRepository.findOne({ where: { email } });
+    return this.userRepository.findOne({
+      where: { email },
+      relations: ['ambulanceUnits', 'activeAmbulanceUnit'],
+    });
   }
 
   async update(id: string, updateUserDto: UpdateUserDto) {
@@ -151,14 +167,18 @@ export class UsersService {
       user.passwordHash = passwordHash;
     }
 
+    if (updateUserDto.ambulanceUnitIds !== undefined) {
+      user.ambulanceUnits = await this.resolveAmbulanceUnits(
+        updateUserDto.ambulanceUnitIds,
+      );
+    }
+
     Object.assign(user, updateData);
+    this.syncAmbulanceRoleState(user);
 
     const updatedUser = await this.userRepository.save(user);
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { passwordHash, ...userWithoutPassword } = updatedUser;
-
-    return userWithoutPassword;
+    return this.findOneOrFail(updatedUser.id);
   }
 
   async remove(id: string): Promise<void> {
@@ -173,6 +193,57 @@ export class UsersService {
   async deactivateUser(id: string): Promise<User | null> {
     await this.userRepository.update(id, { status: UserStatus.INACTIVE });
     return this.findOne(id);
+  }
+
+  async findOneOrFail(id: string): Promise<User> {
+    const user = await this.findOne(id);
+
+    if (!user) {
+      throw new BadRequestException(`User with ID ${id} not found`);
+    }
+
+    return user;
+  }
+
+  private async resolveAmbulanceUnits(
+    ambulanceUnitIds?: string[],
+  ): Promise<AmbulanceUnit[]> {
+    if (!ambulanceUnitIds || ambulanceUnitIds.length === 0) {
+      return [];
+    }
+
+    const uniqueIds = Array.from(new Set(ambulanceUnitIds));
+    const units = await this.ambulanceUnitRepository.find({
+      where: { id: In(uniqueIds) },
+    });
+
+    if (units.length !== uniqueIds.length) {
+      throw new BadRequestException('One or more ambulance units do not exist');
+    }
+
+    return units;
+  }
+
+  private syncAmbulanceRoleState(user: User): void {
+    if (user.role !== UserRole.AMBULANCE) {
+      user.ambulanceUnits = [];
+      user.activeAmbulanceUnit = null;
+      return;
+    }
+
+    const assignedUnits = user.ambulanceUnits ?? [];
+
+    if (assignedUnits.length === 1) {
+      user.activeAmbulanceUnit = assignedUnits[0];
+      return;
+    }
+
+    if (
+      !user.activeAmbulanceUnit ||
+      !assignedUnits.some((unit) => unit.id === user.activeAmbulanceUnit?.id)
+    ) {
+      user.activeAmbulanceUnit = null;
+    }
   }
 
   private applyFilters(

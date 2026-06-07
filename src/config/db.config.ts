@@ -24,8 +24,10 @@ export const typeOrmFactory = (
     type: 'postgres',
     url: dbCfg?.url,
     autoLoadEntities: true,
-    synchronize: process.env.NODE_ENV !== 'production',
+    synchronize: false,
+    migrationsRun: process.env.NODE_ENV !== 'test',
     entities: [__dirname + '/../**/*.entity.{ts,js}'],
+    migrations: [__dirname + '/../migrations/*.{ts,js}'],
     logging: ['error', 'warn'],
   };
 };
