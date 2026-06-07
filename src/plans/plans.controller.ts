@@ -25,43 +25,43 @@ export class PlansController {
   constructor(private readonly plansService: PlansService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   create(@Body() createPlanDto: CreatePlanDto) {
     return this.plansService.create(createPlanDto);
   }
 
-  @Get()
-  @Roles(UserRole.ADMIN, UserRole.DISPATCHER)
+@Get()
+  @Roles(UserRole.ADMIN, UserRole.DISPATCHER, UserRole.SUPER_ADMIN)
   findAll(@Query() query: QueryPlansDto) {
     return this.plansService.findAll(query);
   }
 
-  @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.DISPATCHER)
+@Get(':id')
+  @Roles(UserRole.ADMIN, UserRole.DISPATCHER, UserRole.SUPER_ADMIN)
   findOne(@Param('id') id: string) {
     return this.plansService.findOne(id);
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   update(@Param('id') id: string, @Body() updatePlanDto: UpdatePlanDto) {
     return this.plansService.update(id, updatePlanDto);
   }
 
   @Put(':id/deactivate')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   deactivate(@Param('id') id: string) {
     return this.plansService.deactivate(id);
   }
 
   @Put(':id/activate')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   activate(@Param('id') id: string) {
     return this.plansService.activate(id);
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   remove(@Param('id') id: string) {
     return this.plansService.remove(id);
   }

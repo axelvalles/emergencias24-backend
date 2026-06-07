@@ -40,13 +40,13 @@ export class PatientsController {
   ) {}
 
   @Post()
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   create(@Body() createPatientDto: CreatePatientDto) {
     return this.patientsService.create(createPatientDto);
   }
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.DISPATCHER)
+  @Roles(UserRole.ADMIN, UserRole.DISPATCHER, UserRole.SUPER_ADMIN)
   findAll(
     @Query(
       new ValidationPipe({
@@ -60,25 +60,25 @@ export class PatientsController {
   }
 
   @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.DISPATCHER)
+  @Roles(UserRole.ADMIN, UserRole.DISPATCHER, UserRole.SUPER_ADMIN)
   findOne(@Param('id') id: string) {
     return this.patientsService.findOne(id);
   }
 
   @Get('by-document/:document')
-  @Roles(UserRole.ADMIN, UserRole.DISPATCHER)
+  @Roles(UserRole.ADMIN, UserRole.DISPATCHER, UserRole.SUPER_ADMIN)
   findByDocument(@Param('document') document: string) {
     return this.patientsService.findByDocument(document);
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   update(@Param('id') id: string, @Body() updatePatientDto: UpdatePatientDto) {
     return this.patientsService.update(id, updatePatientDto);
   }
 
   @Patch(':id/status')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   updateStatus(
     @Param('id') id: string,
     @Body() updatePatientStatusDto: UpdatePatientStatusDto,
@@ -87,19 +87,19 @@ export class PatientsController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   remove(@Param('id') id: string) {
     return this.patientsService.remove(id);
   }
 
   @Get('import/template')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   async generateImportTemplate(@Res() res: Response) {
     await this.patientsImportService.generateTemplate(res);
   }
 
   @Post('import')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @UseInterceptors(
     FileInterceptor('file', {
       limits: {

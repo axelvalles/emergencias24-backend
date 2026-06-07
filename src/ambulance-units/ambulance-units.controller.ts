@@ -48,7 +48,7 @@ export class AmbulanceUnitsController {
   }
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.DISPATCHER)
+  @Roles(UserRole.ADMIN, UserRole.DISPATCHER, UserRole.SUPER_ADMIN)
   findAll(
     @Query(
       new ValidationPipe({
@@ -84,7 +84,7 @@ export class AmbulanceUnitsController {
   }
 
   @Patch('active/:id')
-  @Roles(UserRole.AMBULANCE)
+  @Roles(UserRole.ADMIN, UserRole.DISPATCHER, UserRole.SUPER_ADMIN, UserRole.AMBULANCE)
   setActiveUnit(@GetUser() user: User, @Param('id') id: string) {
     return this.ambulanceUnitsService.setActiveUnit(user, id);
   }

@@ -24,31 +24,31 @@ export class BenefitsController {
   constructor(private readonly benefitsService: BenefitsService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   create(@Body() createBenefitDto: CreateBenefitDto) {
     return this.benefitsService.create(createBenefitDto);
   }
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.DISPATCHER)
+  @Roles(UserRole.ADMIN, UserRole.DISPATCHER, UserRole.SUPER_ADMIN)
   findAll(@Query() query: QueryBenefitsDto) {
     return this.benefitsService.findAll(query);
   }
 
   @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.DISPATCHER)
+  @Roles(UserRole.ADMIN, UserRole.DISPATCHER, UserRole.SUPER_ADMIN)
   findOne(@Param('id') id: string) {
     return this.benefitsService.findOne(id);
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   update(@Param('id') id: string, @Body() updateBenefitDto: UpdateBenefitDto) {
     return this.benefitsService.update(id, updateBenefitDto);
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   remove(@Param('id') id: string) {
     return this.benefitsService.remove(id);
   }
