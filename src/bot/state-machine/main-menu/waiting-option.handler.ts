@@ -9,7 +9,6 @@ import {
   BOT_STATES,
 } from '../types';
 import { BOT_MESSAGES, withNavigationHint } from '../navigation.config';
-import { Priority, ServiceType } from 'src/tickets/entities/ticket.entity';
 
 export class WaitingMenuOptionHandler extends BaseHandler {
   state: BotStates = BOT_STATES.WAITING_MENU_OPTION;
@@ -76,27 +75,6 @@ export class WaitingMenuOptionHandler extends BaseHandler {
 
         return {
           nextState: BOT_STATES.LABORATORY_WAITING_TEST,
-          lastInteraction: new Date().toISOString(),
-          currentState: this.state,
-        };
-
-      case 'realizacion-de-estudios':
-        await services.ticketsService.create({
-          serviceType: ServiceType.STUDY_TRANSFER,
-          priority: Priority.LOW,
-          requesterPhone: messagingResponse.from,
-          requesterName: messagingResponse.profileName,
-          description:
-            'Solicitud de traslado para realización de estudios (ida y vuelta) entre entidades de salud. Requiere validación operativa y cotización manual.',
-        });
-
-        await services.messaging.sendMessage(
-          messagingResponse.from,
-          BOT_MESSAGES.STUDY_TRANSFER_CONFIRMATION,
-        );
-
-        return {
-          nextState: BOT_STATES.START,
           lastInteraction: new Date().toISOString(),
           currentState: this.state,
         };

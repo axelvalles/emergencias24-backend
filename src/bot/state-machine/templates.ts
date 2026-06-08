@@ -28,7 +28,9 @@ export const TWILIO_MESSSAGES = {
 7️⃣ Marcano
 8️⃣ Díaz
 9️⃣ Tubores
-🔟 P. Macanao`,
+🔟 P. Macanao
+
+0️⃣ Programados & Estudios`,
 
   MEDICAL_CONSULTATIONS_SPECIALITY: `¿Para qué especialidad médica necesitas una consulta?
 

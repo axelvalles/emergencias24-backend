@@ -38,6 +38,6 @@ export class CreateUserDto {
   @IsOptional()
   @IsArray()
   @ArrayMaxSize(100)
-  @IsUUID('4', { each: true })
+  @IsUUID('7', { each: true })
   ambulanceUnitIds?: string[];
 }

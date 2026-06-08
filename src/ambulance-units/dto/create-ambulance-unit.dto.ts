@@ -9,6 +9,6 @@ export class CreateAmbulanceUnitDto {
   @IsOptional()
   @IsArray()
   @ArrayMaxSize(100)
-  @IsUUID('4', { each: true })
+  @IsUUID('7', { each: true })
   memberIds?: string[];
 }

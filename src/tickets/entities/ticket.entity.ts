@@ -19,7 +19,6 @@ export enum ServiceType {
   MEDICAL_CONSULTATION = 'medical_consultation',
   AMBULANCE = 'ambulance',
   LABORATORY = 'laboratory',
-  STUDY_TRANSFER = 'study_transfer',
   APPOINTMENT = 'appointment',
   EQUIPMENT_RENTAL = 'equipment_rental',
   PLANS = 'plans',

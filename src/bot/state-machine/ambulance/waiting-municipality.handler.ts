@@ -7,9 +7,9 @@ import {
   BotStates,
   BOT_STATES,
 } from '../types';
-import { ServiceType } from 'src/tickets/entities/ticket.entity';
+import { Priority, ServiceType } from 'src/tickets/entities/ticket.entity';
 import { MUNICIPALITIES } from 'src/municipality-pricing/constants/municipality-pricing.constants';
-import { withNavigationHint } from '../navigation.config';
+import { BOT_MESSAGES, withNavigationHint } from '../navigation.config';
 
 export class AmbulanceWaitingMunicipalityHandler extends BaseHandler {
   state: BotStates = BOT_STATES.AMBULANCE_WAITING_MUNICIPALITY;
@@ -29,6 +29,32 @@ export class AmbulanceWaitingMunicipalityHandler extends BaseHandler {
         'Por favor, indica un municipio para continuar.',
       );
       return this.repeatState();
+    }
+
+    if (
+      input.toLowerCase() === '0' ||
+      input.toLowerCase() === 'programados' ||
+      input.toLowerCase() === 'programados & estudios'
+    ) {
+      await services.ticketsService.create({
+        serviceType: ServiceType.AMBULANCE,
+        priority: Priority.LOW,
+        requesterPhone: messagingResponse.from,
+        requesterName: messagingResponse.profileName,
+        description:
+          'Solicitud de traslado para realización de estudios (ida y vuelta). Validar disponibilidad y coordinar con el paciente.',
+      });
+
+      await services.messaging.sendMessage(
+        messagingResponse.from,
+        BOT_MESSAGES.STUDY_TRANSFER_CONFIRMATION,
+      );
+
+      return {
+        nextState: BOT_STATES.START,
+        lastInteraction: new Date().toISOString(),
+        currentState: this.state,
+      };
     }
 
     const number = parseInt(input, 10);
