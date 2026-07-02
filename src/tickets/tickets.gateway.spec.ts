@@ -2,6 +2,7 @@ import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { UserRole, UserStatus } from '../users/entities/user.entity';
 import { TicketsGateway } from './tickets.gateway';
+import { TICKET_OWNER_ROLE } from './ticket-owner-role';
 
 type MockSocket = {
   id: string;
@@ -10,6 +11,14 @@ type MockSocket = {
   join: jest.Mock<Promise<void>, [string]>;
   leave: jest.Mock<Promise<void>, [string]>;
   disconnect: jest.Mock<void, [boolean]>;
+};
+
+type MockServerEmitter = {
+  emit: jest.Mock<void, [string, Record<string, unknown>]>;
+};
+
+type MockServer = {
+  to: jest.Mock;
 };
 
 describe('TicketsGateway auth and room authorization', () => {
@@ -26,6 +35,12 @@ describe('TicketsGateway auth and room authorization', () => {
     disconnect: jest.fn(),
   });
 
+  const makeServer = (): MockServer => ({
+    to: jest.fn(() => ({
+      emit: jest.fn(),
+    })),
+  });
+
   beforeEach(() => {
     jwtService = {
       verify: jest.fn(),
@@ -39,6 +54,7 @@ describe('TicketsGateway auth and room authorization', () => {
       usersService as unknown as UsersService,
       jwtService as unknown as JwtService,
     );
+    gateway.server = makeServer() as never;
   });
 
   it('disconnects on connection when JWT is missing', async () => {
@@ -122,22 +138,73 @@ describe('TicketsGateway auth and room authorization', () => {
     });
   });
 
-  it('joins the active ambulance unit room for ambulance users', async () => {
+  it('joins the active ambulance unit room for paramedic users', async () => {
     const socket = makeSocket();
     socket.handshake.auth = { token: 'jwt-token' };
 
-    jwtService.verify.mockReturnValue({ sub: 'ambulance-1' });
+    jwtService.verify.mockReturnValue({ sub: 'paramedic-1' });
     usersService.findOne.mockResolvedValue({
-      id: 'ambulance-1',
-      role: UserRole.AMBULANCE,
-      email: 'ambulance@example.com',
+      id: 'paramedic-1',
+      role: UserRole.PARAMEDIC,
+      email: 'paramedic@example.com',
       status: UserStatus.ACTIVE,
       activeAmbulanceUnit: { id: 'unit-123' },
     });
 
     await gateway.handleConnection(socket as never);
 
+    expect(socket.join).toHaveBeenCalledWith('tickets:role:paramedic');
     expect(socket.join).toHaveBeenCalledWith('tickets:ambulance-unit:unit-123');
+  });
+
+  it('joins the role room for doctor users', async () => {
+    const socket = makeSocket();
+    socket.handshake.auth = { token: 'jwt-token' };
+
+    jwtService.verify.mockReturnValue({ sub: 'doctor-1' });
+    usersService.findOne.mockResolvedValue({
+      id: 'doctor-1',
+      role: UserRole.DOCTOR,
+      email: 'doctor@example.com',
+      status: UserStatus.ACTIVE,
+      activeAmbulanceUnit: null,
+    });
+
+    await gateway.handleConnection(socket as never);
+
+    expect(socket.join).toHaveBeenCalledWith('tickets:role:doctor');
+    expect(socket.join).not.toHaveBeenCalledWith('tickets');
+  });
+
+  it('emits ticket.created once to the destination role room', () => {
+    const ticket = {
+      id: 'ticket-role-1',
+      currentOwnerRole: TICKET_OWNER_ROLE.APPOINTMENT_MANAGER,
+      assignedUnit: null,
+    };
+
+    gateway.emitTicketCreated(ticket as never);
+
+    expect(gateway.server.to).toHaveBeenCalledWith(
+      'tickets:role:appointment_manager',
+    );
+    expect(gateway.server.to).toHaveBeenCalledWith('tickets');
+  });
+
+  it('fans out paramedic assignment events to role and unit rooms only once each', () => {
+    const ticket = {
+      id: 'ticket-role-2',
+      currentOwnerRole: TICKET_OWNER_ROLE.PARAMEDIC,
+      assignedUnit: { id: 'unit-55' },
+    };
+
+    gateway.emitTicketAssigned(ticket as never);
+
+    expect(gateway.server.to).toHaveBeenCalledWith('tickets:role:paramedic');
+    expect(gateway.server.to).toHaveBeenCalledWith(
+      'tickets:ambulance-unit:unit-55',
+    );
+    expect(gateway.server.to).toHaveBeenCalledWith('tickets');
   });
 
   it('disconnects room leave when user is missing', () => {

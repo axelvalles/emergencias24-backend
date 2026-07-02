@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import { Ticket, TicketStatus } from './entities/ticket.entity';
 import { TicketStatusHistory } from './entities/ticket-status-history.entity';
+import { TicketRoleHandoff } from './entities/ticket-role-handoff.entity';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { QueryTicketsDto } from './dto/query-tickets.dto';
 import { TicketsGateway } from './tickets.gateway';
@@ -16,6 +17,13 @@ import { Patient } from 'src/patients/entities/patient.entity';
 import { applyGlobalSearch } from '../common/query/apply-global-search';
 import { AmbulanceUnitsService } from 'src/ambulance-units/ambulance-units.service';
 import { AmbulanceUnit } from 'src/ambulance-units/entities/ambulance-unit.entity';
+import { ActionTicketDto } from './dto/action-ticket.dto';
+import { TICKET_OWNER_ROLE, type TicketOwnerRole } from './ticket-owner-role';
+import { TicketRoutingPolicy } from './ticket-routing.policy';
+import {
+  buildTicketHistoryTimeline,
+  type TicketHistoryTimelineEntry,
+} from './ticket-history.timeline';
 
 const TICKET_SORT_COLUMN_MAP: Record<string, string> = {
   createdAt: 'ticket.createdAt',
@@ -25,6 +33,12 @@ const TICKET_SORT_COLUMN_MAP: Record<string, string> = {
   priority: 'ticket.priority',
 };
 
+const PRIVILEGED_TICKET_ROLES = new Set<UserRole>([
+  UserRole.SUPER_ADMIN,
+  UserRole.ADMIN,
+  UserRole.DISPATCHER,
+]);
+
 @Injectable()
 export class TicketsService {
   constructor(
@@ -32,17 +46,34 @@ export class TicketsService {
     private readonly ticketRepository: Repository<Ticket>,
     @InjectRepository(TicketStatusHistory)
     private readonly historyRepository: Repository<TicketStatusHistory>,
+    @InjectRepository(TicketRoleHandoff)
+    private readonly handoffRepository: Repository<TicketRoleHandoff>,
     private readonly ticketsGateway: TicketsGateway,
     private readonly ambulanceUnitsService: AmbulanceUnitsService,
+    private readonly ticketRoutingPolicy: TicketRoutingPolicy,
   ) {}
 
   async create(dto: CreateTicketDto, patient?: Patient): Promise<Ticket> {
-    const ticket = this.ticketRepository.create({ ...dto, patient });
+    const ticket = this.ticketRepository.create({
+      ...dto,
+      patient,
+      currentOwnerRole: this.ticketRoutingPolicy.resolveOwnerRole(
+        dto.serviceType,
+      ),
+    });
 
     const savedTicket = await this.ticketRepository.save(ticket);
 
     // Registrar historial inicial
     await this.createHistory(savedTicket, TicketStatus.PENDING);
+
+    await this.createHandoffIfNeeded({
+      ticket: savedTicket,
+      fromOwnerRole: null,
+      toOwnerRole: savedTicket.currentOwnerRole ?? null,
+      fromAssignedUnitId: null,
+      toAssignedUnitId: savedTicket.assignedUnit?.id ?? null,
+    });
 
     // Emitir evento WebSocket
     this.ticketsGateway.emitTicketCreated(savedTicket);
@@ -70,7 +101,10 @@ export class TicketsService {
     return ticket;
   }
 
-  async findAll(queryDto: QueryTicketsDto = {}, user?: User): Promise<{
+  async findAll(
+    queryDto: QueryTicketsDto = {},
+    user?: User,
+  ): Promise<{
     data: Ticket[];
     total: number;
     page: number;
@@ -134,26 +168,55 @@ export class TicketsService {
 
   async assignTicket(
     id: string,
-    ambulanceUnitId: string,
+    action: ActionTicketDto,
     changedBy?: User,
-    comment?: string,
   ): Promise<Ticket> {
     const ticket = await this.findOne(id);
-    const ambulanceUnit = await this.ambulanceUnitsService.findOne(
-      ambulanceUnitId,
+    const previousOwnerRole = ticket.currentOwnerRole ?? null;
+    const previousAssignedUnitId = ticket.assignedUnit?.id ?? null;
+    const nextOwnerRole = this.resolveNextOwnerRole(
+      ticket.currentOwnerRole,
+      action,
     );
 
-    if (ambulanceUnit.members.length === 0) {
-      throw new BadRequestException(
-        'Tickets can only be assigned to ambulance units with at least one member',
+    if (nextOwnerRole === TICKET_OWNER_ROLE.PARAMEDIC) {
+      if (!action.ambulanceUnitId) {
+        throw new BadRequestException(
+          'Paramedic-owned tickets require an ambulance unit assignment',
+        );
+      }
+
+      const ambulanceUnit = await this.ambulanceUnitsService.findOne(
+        action.ambulanceUnitId,
       );
+
+      if (ambulanceUnit.members.length === 0) {
+        throw new BadRequestException(
+          'Tickets can only be assigned to ambulance units with at least one member',
+        );
+      }
+
+      ticket.assignedUnit = ambulanceUnit;
+      ticket.assignedAt = new Date();
+    } else {
+      ticket.assignedUnit = null;
+      ticket.assignedAt = null;
     }
 
-    ticket.assignedUnit = ambulanceUnit;
-    ticket.assignedAt = new Date();
+    ticket.currentOwnerRole = nextOwnerRole;
     ticket.status = TicketStatus.ASSIGNED;
 
     const savedTicket = await this.ticketRepository.save(ticket);
+
+    await this.createHandoffIfNeeded({
+      ticket: savedTicket,
+      fromOwnerRole: previousOwnerRole,
+      toOwnerRole: savedTicket.currentOwnerRole ?? null,
+      changedBy,
+      fromAssignedUnitId: previousAssignedUnitId,
+      toAssignedUnitId: savedTicket.assignedUnit?.id ?? null,
+      note: action.comment,
+    });
 
     this.ticketsGateway.emitTicketUpdated(savedTicket);
     this.ticketsGateway.emitTicketAssigned(savedTicket);
@@ -162,7 +225,7 @@ export class TicketsService {
       savedTicket,
       TicketStatus.ASSIGNED,
       changedBy,
-      comment,
+      action.comment,
     );
 
     return savedTicket;
@@ -171,7 +234,7 @@ export class TicketsService {
   async startTicket(id: string, user: User, comment?: string): Promise<Ticket> {
     const ticket = await this.findOne(id, user);
 
-    if (ticket.status !== TicketStatus.ASSIGNED) {
+    if (!this.canStartTicket(ticket)) {
       throw new BadRequestException('Only assigned tickets can be started');
     }
 
@@ -252,13 +315,28 @@ export class TicketsService {
     return savedTicket;
   }
 
-  async getHistory(id: string, user?: User): Promise<TicketStatusHistory[]> {
+  async getHistory(
+    id: string,
+    user?: User,
+  ): Promise<TicketHistoryTimelineEntry[]> {
     await this.findOne(id, user);
 
-    return this.historyRepository.find({
-      where: { ticket: { id } },
-      relations: ['changedBy'],
-      order: { createdAt: 'ASC' },
+    const [statusHistory, handoffs] = await Promise.all([
+      this.historyRepository.find({
+        where: { ticket: { id } },
+        relations: ['changedBy'],
+        order: { createdAt: 'ASC' },
+      }),
+      this.handoffRepository.find({
+        where: { ticket: { id } },
+        relations: ['changedBy'],
+        order: { createdAt: 'ASC' },
+      }),
+    ]);
+
+    return buildTicketHistoryTimeline({
+      statusHistory,
+      handoffs,
     });
   }
 
@@ -273,8 +351,44 @@ export class TicketsService {
       status,
       changedBy,
       comment,
+      ownerRoleAtChange: ticket.currentOwnerRole ?? null,
+      assignedUnitIdSnapshot: ticket.assignedUnit?.id ?? null,
     });
     await this.historyRepository.save(history);
+  }
+
+  private async createHandoffIfNeeded({
+    ticket,
+    fromOwnerRole,
+    toOwnerRole,
+    changedBy,
+    fromAssignedUnitId,
+    toAssignedUnitId,
+    note,
+  }: {
+    ticket: Ticket;
+    fromOwnerRole: TicketOwnerRole | null;
+    toOwnerRole: TicketOwnerRole | null;
+    changedBy?: User;
+    fromAssignedUnitId: string | null;
+    toAssignedUnitId: string | null;
+    note?: string;
+  }): Promise<void> {
+    if (!toOwnerRole || fromOwnerRole === toOwnerRole) {
+      return;
+    }
+
+    const handoff = this.handoffRepository.create({
+      ticket,
+      fromOwnerRole,
+      toOwnerRole,
+      changedBy,
+      fromAssignedUnitId,
+      toAssignedUnitId,
+      note,
+    });
+
+    await this.handoffRepository.save(handoff);
   }
 
   private applyFilters(
@@ -334,7 +448,13 @@ export class TicketsService {
       });
     }
 
-    if (user?.role === UserRole.AMBULANCE) {
+    if (user?.role && !this.isPrivilegedRole(user.role)) {
+      queryBuilder.andWhere('ticket.currentOwnerRole = :currentOwnerRole', {
+        currentOwnerRole: user.role,
+      });
+    }
+
+    if (user?.role === UserRole.PARAMEDIC) {
       if ((user.ambulanceUnits ?? []).length === 0) {
         queryBuilder.andWhere('1 = 0');
         return;
@@ -383,7 +503,17 @@ export class TicketsService {
   }
 
   private assertCanAccessTicket(ticket: Ticket, user?: User): void {
-    if (!user || user.role !== UserRole.AMBULANCE) {
+    if (!user || this.isPrivilegedRole(user.role)) {
+      return;
+    }
+
+    if (!ticket.currentOwnerRole || ticket.currentOwnerRole !== user.role) {
+      throw new ForbiddenException(
+        'Operational users can only access tickets owned by their role',
+      );
+    }
+
+    if (user.role !== UserRole.PARAMEDIC) {
       return;
     }
 
@@ -391,7 +521,7 @@ export class TicketsService {
 
     if (ticket.assignedUnit?.id !== activeUnit.id) {
       throw new ForbiddenException(
-        'Ambulance users can only access tickets assigned to their active unit',
+        'Paramedic users can only access tickets assigned to their active unit',
       );
     }
   }
@@ -405,7 +535,7 @@ export class TicketsService {
 
     if (!user.activeAmbulanceUnit) {
       throw new ForbiddenException(
-        'Ambulance users must select an active ambulance unit first',
+        'Paramedic users must select an active ambulance unit first',
       );
     }
 
@@ -420,5 +550,37 @@ export class TicketsService {
     }
 
     return user.activeAmbulanceUnit;
+  }
+
+  private isPrivilegedRole(role?: UserRole): boolean {
+    return role ? PRIVILEGED_TICKET_ROLES.has(role) : false;
+  }
+
+  private resolveNextOwnerRole(
+    currentOwnerRole: TicketOwnerRole | null | undefined,
+    action: ActionTicketDto,
+  ): TicketOwnerRole {
+    const nextOwnerRole = action.ownerRole ?? currentOwnerRole;
+
+    if (!nextOwnerRole) {
+      throw new BadRequestException(
+        'An owner role is required to assign or hand off a ticket',
+      );
+    }
+
+    return nextOwnerRole;
+  }
+
+  private canStartTicket(ticket: Ticket): boolean {
+    if (ticket.status === TicketStatus.ASSIGNED) {
+      return true;
+    }
+
+    return (
+      ticket.status === TicketStatus.PENDING &&
+      ticket.currentOwnerRole !== null &&
+      ticket.currentOwnerRole !== undefined &&
+      ticket.currentOwnerRole !== TICKET_OWNER_ROLE.PARAMEDIC
+    );
   }
 }

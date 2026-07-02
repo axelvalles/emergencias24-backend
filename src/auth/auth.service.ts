@@ -84,7 +84,7 @@ export class AuthService {
   }
 
   private async ensureActiveAmbulanceUnit(user: User): Promise<User> {
-    if (user.role !== UserRole.AMBULANCE) {
+    if (user.role !== UserRole.PARAMEDIC) {
       if (user.activeAmbulanceUnit) {
         user.activeAmbulanceUnit = null;
         return this.userRepository.save(user);

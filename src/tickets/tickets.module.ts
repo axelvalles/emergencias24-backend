@@ -9,10 +9,12 @@ import { Ticket } from './entities/ticket.entity';
 import { TicketStatusHistory } from './entities/ticket-status-history.entity';
 import { UsersModule } from 'src/users/users.module';
 import { AmbulanceUnitsModule } from 'src/ambulance-units/ambulance-units.module';
+import { TicketRoutingPolicy } from './ticket-routing.policy';
+import { TicketRoleHandoff } from './entities/ticket-role-handoff.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Ticket, TicketStatusHistory]),
+    TypeOrmModule.forFeature([Ticket, TicketStatusHistory, TicketRoleHandoff]),
     UsersModule,
     AmbulanceUnitsModule,
     JwtModule.registerAsync({
@@ -24,7 +26,7 @@ import { AmbulanceUnitsModule } from 'src/ambulance-units/ambulance-units.module
     }),
   ],
   controllers: [TicketsController],
-  providers: [TicketsService, TicketsGateway],
+  providers: [TicketsService, TicketsGateway, TicketRoutingPolicy],
   exports: [TicketsService, TicketsGateway],
 })
 export class TicketsModule {}

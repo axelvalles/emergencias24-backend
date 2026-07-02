@@ -7,15 +7,24 @@ const ROLE_HIERARCHY: Record<UserRole, readonly UserRole[]> = {
     UserRole.SUPER_ADMIN,
     UserRole.ADMIN,
     UserRole.DISPATCHER,
-    UserRole.AMBULANCE,
+    UserRole.PARAMEDIC,
+    UserRole.DOCTOR,
+    UserRole.APPOINTMENT_MANAGER,
+    UserRole.MARKETING,
   ],
   [UserRole.ADMIN]: [
     UserRole.ADMIN,
     UserRole.DISPATCHER,
-    UserRole.AMBULANCE,
+    UserRole.PARAMEDIC,
+    UserRole.DOCTOR,
+    UserRole.APPOINTMENT_MANAGER,
+    UserRole.MARKETING,
   ],
   [UserRole.DISPATCHER]: [UserRole.DISPATCHER],
-  [UserRole.AMBULANCE]: [UserRole.AMBULANCE],
+  [UserRole.PARAMEDIC]: [UserRole.PARAMEDIC],
+  [UserRole.DOCTOR]: [UserRole.DOCTOR],
+  [UserRole.APPOINTMENT_MANAGER]: [UserRole.APPOINTMENT_MANAGER],
+  [UserRole.MARKETING]: [UserRole.MARKETING],
 };
 
 @Injectable()
@@ -40,8 +49,8 @@ export class RolesGuard implements CanActivate {
         ? [user.role]
         : [];
 
-    const normalizedUserRoles = rawUserRoles.filter(
-      (role): role is UserRole => Object.values(UserRole).includes(role as UserRole),
+    const normalizedUserRoles = rawUserRoles.filter((role): role is UserRole =>
+      Object.values(UserRole).includes(role as UserRole),
     );
 
     const hasRole = normalizedUserRoles.some((userRole) =>

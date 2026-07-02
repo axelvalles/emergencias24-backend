@@ -37,7 +37,7 @@ export class AmbulanceWaitingMunicipalityHandler extends BaseHandler {
       input.toLowerCase() === 'programados & estudios'
     ) {
       await services.ticketsService.create({
-        serviceType: ServiceType.AMBULANCE,
+        serviceType: ServiceType.STUDY_TRANSFER,
         priority: Priority.LOW,
         requesterPhone: messagingResponse.from,
         requesterName: messagingResponse.profileName,

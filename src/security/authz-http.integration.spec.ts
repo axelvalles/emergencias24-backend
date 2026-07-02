@@ -167,6 +167,28 @@ describe('AuthZ HTTP integration matrix', () => {
     await request(app.getHttpServer()).get('/tickets').expect(200);
   });
 
+  it('returns 200 for operational roles on ticket read endpoints added by role routing', async () => {
+    const allowedUsers: TestUser[] = [
+      { id: 'doctor-1', role: UserRole.DOCTOR },
+      {
+        id: 'appointment-manager-1',
+        role: UserRole.APPOINTMENT_MANAGER,
+      },
+      { id: 'marketing-1', role: UserRole.MARKETING },
+      { id: 'paramedic-1', role: UserRole.PARAMEDIC },
+      { id: 'super-admin-1', role: UserRole.SUPER_ADMIN },
+    ];
+
+    for (const user of allowedUsers) {
+      authState.currentUser = user;
+
+      await request(app.getHttpServer()).get('/tickets').expect(200);
+      await request(app.getHttpServer())
+        .get('/tickets/019e79f9-9941-758b-9bd2-18f4d1da9148/history')
+        .expect(200);
+    }
+  });
+
   it('returns 403 for dispatcher on admin-only endpoint', async () => {
     authState.currentUser = { id: 'dispatcher-1', role: UserRole.DISPATCHER };
 
@@ -181,5 +203,26 @@ describe('AuthZ HTTP integration matrix', () => {
     await request(app.getHttpServer())
       .delete('/companies/019e79f9-9941-758b-9bd2-18f4d1da9148')
       .expect(200);
+  });
+
+  it('returns 403 for operational roles on privileged ticket handoff endpoints', async () => {
+    const restrictedUsers: TestUser[] = [
+      { id: 'doctor-1', role: UserRole.DOCTOR },
+      {
+        id: 'appointment-manager-1',
+        role: UserRole.APPOINTMENT_MANAGER,
+      },
+      { id: 'marketing-1', role: UserRole.MARKETING },
+      { id: 'paramedic-1', role: UserRole.PARAMEDIC },
+    ];
+
+    for (const user of restrictedUsers) {
+      authState.currentUser = user;
+
+      await request(app.getHttpServer())
+        .patch('/tickets/019e79f9-9941-758b-9bd2-18f4d1da9148/assign')
+        .send({ ownerRole: UserRole.DOCTOR })
+        .expect(403);
+    }
   });
 });

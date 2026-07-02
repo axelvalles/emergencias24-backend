@@ -84,7 +84,12 @@ export class AmbulanceUnitsController {
   }
 
   @Patch('active/:id')
-  @Roles(UserRole.ADMIN, UserRole.DISPATCHER, UserRole.SUPER_ADMIN, UserRole.AMBULANCE)
+  @Roles(
+    UserRole.ADMIN,
+    UserRole.DISPATCHER,
+    UserRole.SUPER_ADMIN,
+    UserRole.PARAMEDIC,
+  )
   setActiveUnit(@GetUser() user: User, @Param('id') id: string) {
     return this.ambulanceUnitsService.setActiveUnit(user, id);
   }

@@ -225,7 +225,7 @@ export class UsersService {
   }
 
   private syncAmbulanceRoleState(user: User): void {
-    if (user.role !== UserRole.AMBULANCE) {
+    if (user.role !== UserRole.PARAMEDIC) {
       user.ambulanceUnits = [];
       user.activeAmbulanceUnit = null;
       return;

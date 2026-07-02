@@ -28,7 +28,7 @@ function getRequiredEnv(name: string): string {
 
 function getSeedUserConfig(
   role: UserRole,
-  prefix: 'SUPERUSER' | 'ADMIN_USER' | 'DISPATCHER_USER' | 'AMBULANCE_USER',
+  prefix: 'SUPERUSER' | 'ADMIN_USER' | 'DISPATCHER_USER' | 'PARAMEDIC_USER',
   defaults: {
     email: string;
     firstName: string;
@@ -77,7 +77,7 @@ async function ensureUser(config: SeedUserConfig): Promise<User> {
     existingUser.role = config.role;
     existingUser.status = UserStatus.ACTIVE;
 
-    if (config.role !== UserRole.AMBULANCE) {
+    if (config.role !== UserRole.PARAMEDIC) {
       existingUser.ambulanceUnits = [];
       existingUser.activeAmbulanceUnit = null;
     }
@@ -174,8 +174,8 @@ async function main() {
       superuserPassword,
     ),
     getSeedUserConfig(
-      UserRole.AMBULANCE,
-      'AMBULANCE_USER',
+      UserRole.PARAMEDIC,
+      'PARAMEDIC_USER',
       {
         email: 'ambulance@example.com',
         firstName: 'Ambulance',
@@ -206,7 +206,7 @@ async function main() {
       seededUsers.set(config.role, user);
     }
 
-    const ambulanceUser = seededUsers.get(UserRole.AMBULANCE);
+    const ambulanceUser = seededUsers.get(UserRole.PARAMEDIC);
 
     if (!ambulanceUser) {
       throw new Error('Ambulance seed user was not created');

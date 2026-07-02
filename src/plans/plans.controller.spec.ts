@@ -20,24 +20,24 @@ describe('PlansController security metadata', () => {
   it('applies expected roles per endpoint', () => {
     expect(
       Reflect.getMetadata(ROLES_KEY, PlansController.prototype.create),
-    ).toEqual([UserRole.ADMIN]);
+    ).toEqual([UserRole.ADMIN, UserRole.SUPER_ADMIN]);
     expect(
       Reflect.getMetadata(ROLES_KEY, PlansController.prototype.findAll),
-    ).toEqual([UserRole.ADMIN, UserRole.DISPATCHER]);
+    ).toEqual([UserRole.ADMIN, UserRole.DISPATCHER, UserRole.SUPER_ADMIN]);
     expect(
       Reflect.getMetadata(ROLES_KEY, PlansController.prototype.findOne),
-    ).toEqual([UserRole.ADMIN, UserRole.DISPATCHER]);
+    ).toEqual([UserRole.ADMIN, UserRole.DISPATCHER, UserRole.SUPER_ADMIN]);
     expect(
       Reflect.getMetadata(ROLES_KEY, PlansController.prototype.update),
-    ).toEqual([UserRole.ADMIN]);
+    ).toEqual([UserRole.ADMIN, UserRole.SUPER_ADMIN]);
     expect(
       Reflect.getMetadata(ROLES_KEY, PlansController.prototype.deactivate),
-    ).toEqual([UserRole.ADMIN]);
+    ).toEqual([UserRole.ADMIN, UserRole.SUPER_ADMIN]);
     expect(
       Reflect.getMetadata(ROLES_KEY, PlansController.prototype.activate),
-    ).toEqual([UserRole.ADMIN]);
+    ).toEqual([UserRole.ADMIN, UserRole.SUPER_ADMIN]);
     expect(
       Reflect.getMetadata(ROLES_KEY, PlansController.prototype.remove),
-    ).toEqual([UserRole.ADMIN]);
+    ).toEqual([UserRole.ADMIN, UserRole.SUPER_ADMIN]);
   });
 });

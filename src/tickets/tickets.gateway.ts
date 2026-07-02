@@ -20,6 +20,7 @@ import { UserRole, UserStatus } from '../users/entities/user.entity';
 import { JwtService } from '@nestjs/jwt';
 
 import { parseCorsOrigins } from '../config/cors';
+import { TICKET_OWNER_ROLE, type TicketOwnerRole } from './ticket-owner-role';
 
 @WebSocketGateway({
   namespace: '/tickets', // 👈 Namespace dedicado para los eventos de tickets
@@ -32,8 +33,13 @@ export class TicketsGateway
     UserRole.SUPER_ADMIN,
     UserRole.ADMIN,
     UserRole.DISPATCHER,
-    UserRole.AMBULANCE,
+    UserRole.PARAMEDIC,
+    UserRole.DOCTOR,
+    UserRole.APPOINTMENT_MANAGER,
+    UserRole.MARKETING,
   ]);
+
+  private static readonly GLOBAL_ROOM = 'tickets';
 
   constructor(
     private readonly usersService: UsersService,
@@ -48,7 +54,9 @@ export class TicketsGateway
 
   private static getAuthenticatedUser(
     client: Socket,
-  ): { id?: string; role?: UserRole; activeAmbulanceUnitId?: string | null } | undefined {
+  ):
+    | { id?: string; role?: UserRole; activeAmbulanceUnitId?: string | null }
+    | undefined {
     const data = client.data as Record<string, unknown>;
 
     return data['user'] as
@@ -58,6 +66,10 @@ export class TicketsGateway
 
   private static getAmbulanceUnitRoom(ambulanceUnitId: string): string {
     return `tickets:ambulance-unit:${ambulanceUnitId}`;
+  }
+
+  private static getRoleRoom(ownerRole: TicketOwnerRole): string {
+    return `tickets:role:${ownerRole}`;
   }
 
   afterInit() {
@@ -143,7 +155,9 @@ export class TicketsGateway
     this.logger.log(`🟢 Client connected: ${client.id}`);
     const user = TicketsGateway.getAuthenticatedUser(client);
 
-    if (user?.role === UserRole.AMBULANCE) {
+    if (user?.role === UserRole.PARAMEDIC) {
+      void client.join(TicketsGateway.getRoleRoom(TICKET_OWNER_ROLE.PARAMEDIC));
+
       if (user.activeAmbulanceUnitId) {
         void client.join(
           TicketsGateway.getAmbulanceUnitRoom(user.activeAmbulanceUnitId),
@@ -156,9 +170,24 @@ export class TicketsGateway
       return;
     }
 
-    void client.join('tickets');
+    if (
+      user?.role === UserRole.DOCTOR ||
+      user?.role === UserRole.APPOINTMENT_MANAGER ||
+      user?.role === UserRole.MARKETING
+    ) {
+      const roleRoom = TicketsGateway.getRoleRoom(user.role);
 
-    this.logger.log(`Client ${client.id} joined default room "tickets"`);
+      void client.join(roleRoom);
+      this.logger.log(`Client ${client.id} joined role room ${roleRoom}`);
+
+      return;
+    }
+
+    void client.join(TicketsGateway.GLOBAL_ROOM);
+
+    this.logger.log(
+      `Client ${client.id} joined default room "${TicketsGateway.GLOBAL_ROOM}"`,
+    );
   }
 
   private isAuthorizedUser(client: Socket): boolean {
@@ -199,7 +228,9 @@ export class TicketsGateway
 
     const user = TicketsGateway.getAuthenticatedUser(client);
 
-    if (user?.role === UserRole.AMBULANCE) {
+    if (user?.role === UserRole.PARAMEDIC) {
+      void client.join(TicketsGateway.getRoleRoom(TICKET_OWNER_ROLE.PARAMEDIC));
+
       if (user.activeAmbulanceUnitId) {
         void client.join(
           TicketsGateway.getAmbulanceUnitRoom(user.activeAmbulanceUnitId),
@@ -217,7 +248,24 @@ export class TicketsGateway
       };
     }
 
-    void client.join('tickets');
+    if (
+      user?.role === UserRole.DOCTOR ||
+      user?.role === UserRole.APPOINTMENT_MANAGER ||
+      user?.role === UserRole.MARKETING
+    ) {
+      const roleRoom = TicketsGateway.getRoleRoom(user.role);
+
+      void client.join(roleRoom);
+      this.logger.log(`Client ${client.id} joined role room ${roleRoom}`);
+
+      return {
+        event: 'joined-tickets-room',
+
+        data: 'Successfully joined tickets room',
+      };
+    }
+
+    void client.join(TicketsGateway.GLOBAL_ROOM);
 
     this.logger.log(`Client ${client.id} joined tickets room`);
 
@@ -238,7 +286,11 @@ export class TicketsGateway
 
     const user = TicketsGateway.getAuthenticatedUser(client);
 
-    if (user?.role === UserRole.AMBULANCE) {
+    if (user?.role === UserRole.PARAMEDIC) {
+      void client.leave(
+        TicketsGateway.getRoleRoom(TICKET_OWNER_ROLE.PARAMEDIC),
+      );
+
       if (user.activeAmbulanceUnitId) {
         void client.leave(
           TicketsGateway.getAmbulanceUnitRoom(user.activeAmbulanceUnitId),
@@ -256,7 +308,24 @@ export class TicketsGateway
       };
     }
 
-    void client.leave('tickets');
+    if (
+      user?.role === UserRole.DOCTOR ||
+      user?.role === UserRole.APPOINTMENT_MANAGER ||
+      user?.role === UserRole.MARKETING
+    ) {
+      const roleRoom = TicketsGateway.getRoleRoom(user.role);
+
+      void client.leave(roleRoom);
+      this.logger.log(`Client ${client.id} left role room ${roleRoom}`);
+
+      return {
+        event: 'left-tickets-room',
+
+        data: 'Successfully left tickets room',
+      };
+    }
+
+    void client.leave(TicketsGateway.GLOBAL_ROOM);
 
     this.logger.log(`Client ${client.id} left tickets room`);
 
@@ -270,76 +339,25 @@ export class TicketsGateway
   // ✅ Método para emitir evento cuando se crea un ticket
 
   emitTicketCreated(ticket: Ticket) {
-    this.server.to('tickets').emit('ticket.created', {
-      ticket,
-
-      timestamp: new Date().toISOString(),
-    });
+    this.emitTicketEvent('ticket.created', ticket);
 
     this.logger.log(`🎟️ Ticket created event emitted for ticket ${ticket.id}`);
   }
 
   emitTicketUpdated(ticket: Ticket) {
-    this.server.to('tickets').emit('ticket.updated', {
-      ticket,
-
-      timestamp: new Date().toISOString(),
-    });
-
-    const assignedUnitId = ticket.assignedUnit?.id;
-
-    if (assignedUnitId) {
-      this.server
-        .to(TicketsGateway.getAmbulanceUnitRoom(assignedUnitId))
-        .emit('ticket.updated', {
-          ticket,
-
-          timestamp: new Date().toISOString(),
-        });
-    }
+    this.emitTicketEvent('ticket.updated', ticket);
 
     this.logger.log(`♻️ Ticket updated event emitted for ticket ${ticket.id}`);
   }
 
   emitTicketAssigned(ticket: Ticket) {
-    this.server.to('tickets').emit('ticket.assigned', {
-      ticket,
-
-      timestamp: new Date().toISOString(),
-    });
-
-    const assignedUnitId = ticket.assignedUnit?.id;
-
-    if (assignedUnitId) {
-      this.server
-        .to(TicketsGateway.getAmbulanceUnitRoom(assignedUnitId))
-        .emit('ticket.assigned', {
-          ticket,
-
-          timestamp: new Date().toISOString(),
-        });
-    }
+    this.emitTicketEvent('ticket.assigned', ticket);
 
     this.logger.log(`👤 Ticket assigned event emitted for ticket ${ticket.id}`);
   }
 
   emitTicketCompleted(ticket: Ticket) {
-    this.server.to('tickets').emit('ticket.completed', {
-      ticket,
-
-      timestamp: new Date().toISOString(),
-    });
-
-    const assignedUnitId = ticket.assignedUnit?.id;
-
-    if (assignedUnitId) {
-      this.server
-        .to(TicketsGateway.getAmbulanceUnitRoom(assignedUnitId))
-        .emit('ticket.completed', {
-          ticket,
-          timestamp: new Date().toISOString(),
-        });
-    }
+    this.emitTicketEvent('ticket.completed', ticket);
 
     this.logger.log(
       `✅ Ticket completed event emitted for ticket ${ticket.id}`,
@@ -347,25 +365,34 @@ export class TicketsGateway
   }
 
   emitTicketCancelled(ticket: Ticket) {
-    this.server.to('tickets').emit('ticket.cancelled', {
-      ticket,
-
-      timestamp: new Date().toISOString(),
-    });
-
-    const assignedUnitId = ticket.assignedUnit?.id;
-
-    if (assignedUnitId) {
-      this.server
-        .to(TicketsGateway.getAmbulanceUnitRoom(assignedUnitId))
-        .emit('ticket.cancelled', {
-          ticket,
-          timestamp: new Date().toISOString(),
-        });
-    }
+    this.emitTicketEvent('ticket.cancelled', ticket);
 
     this.logger.log(
       `🚫 Ticket cancelled event emitted for ticket ${ticket.id}`,
     );
+  }
+
+  private emitTicketEvent(eventName: string, ticket: Ticket) {
+    const payload = {
+      ticket,
+      timestamp: new Date().toISOString(),
+    };
+
+    this.server.to(TicketsGateway.GLOBAL_ROOM).emit(eventName, payload);
+
+    if (ticket.currentOwnerRole) {
+      this.server
+        .to(TicketsGateway.getRoleRoom(ticket.currentOwnerRole))
+        .emit(eventName, payload);
+    }
+
+    if (
+      ticket.currentOwnerRole === TICKET_OWNER_ROLE.PARAMEDIC &&
+      ticket.assignedUnit?.id
+    ) {
+      this.server
+        .to(TicketsGateway.getAmbulanceUnitRoom(ticket.assignedUnit.id))
+        .emit(eventName, payload);
+    }
   }
 }

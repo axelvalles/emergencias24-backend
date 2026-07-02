@@ -59,7 +59,10 @@ export class AmbulanceUnitsService {
 
     const allowedFields = ['name', 'createdAt'];
     const column = allowedFields.includes(sortBy) ? sortBy : 'name';
-    queryBuilder.addOrderBy(`ambulanceUnit.${column}`, sortOrder === 'DESC' ? 'DESC' : 'ASC');
+    queryBuilder.addOrderBy(
+      `ambulanceUnit.${column}`,
+      sortOrder === 'DESC' ? 'DESC' : 'ASC',
+    );
 
     const skip = (currentPage - 1) * sanitizedLimit;
     queryBuilder.skip(skip).take(sanitizedLimit);
@@ -137,15 +140,11 @@ export class AmbulanceUnitsService {
     });
 
     if (activeUsersCount > 0) {
-      throw new ConflictException(
-        'Cannot delete unit with active users',
-      );
+      throw new ConflictException('Cannot delete unit with active users');
     }
 
     if (unit.members && unit.members.length > 0) {
-      throw new ConflictException(
-        'Cannot delete unit with assigned members',
-      );
+      throw new ConflictException('Cannot delete unit with assigned members');
     }
 
     await this.ambulanceUnitRepository.remove(unit);
@@ -161,7 +160,7 @@ export class AmbulanceUnitsService {
       throw new NotFoundException(`User with ID ${user.id} not found`);
     }
 
-    if (authenticatedUser.role !== UserRole.AMBULANCE) {
+    if (authenticatedUser.role !== UserRole.PARAMEDIC) {
       throw new BadRequestException(
         'Only ambulance users can select an active ambulance unit',
       );
@@ -204,7 +203,7 @@ export class AmbulanceUnitsService {
     const members = await this.userRepository.find({
       where: {
         id: In(uniqueIds),
-        role: UserRole.AMBULANCE,
+        role: UserRole.PARAMEDIC,
         status: UserStatus.ACTIVE,
       },
     });
@@ -236,11 +235,13 @@ export class AmbulanceUnitsService {
       relations: ['ambulanceUnits', 'activeAmbulanceUnit'],
     });
 
-    await Promise.all(users.map((user) => this.ensureConsistentActiveUnit(user)));
+    await Promise.all(
+      users.map((user) => this.ensureConsistentActiveUnit(user)),
+    );
   }
 
   private async ensureConsistentActiveUnit(user: User): Promise<User> {
-    if (user.role !== UserRole.AMBULANCE) {
+    if (user.role !== UserRole.PARAMEDIC) {
       if (!user.activeAmbulanceUnit) {
         return user;
       }
@@ -250,7 +251,9 @@ export class AmbulanceUnitsService {
     }
 
     const hasActiveUnit = user.activeAmbulanceUnit
-      ? user.ambulanceUnits.some((unit) => unit.id === user.activeAmbulanceUnit?.id)
+      ? user.ambulanceUnits.some(
+          (unit) => unit.id === user.activeAmbulanceUnit?.id,
+        )
       : false;
 
     if (user.ambulanceUnits.length === 1) {

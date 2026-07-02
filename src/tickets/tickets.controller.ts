@@ -23,6 +23,7 @@ import { Roles } from 'src/auth/decorators/roles.decorator';
 import { User } from 'src/users/entities/user.entity';
 import { UserRole } from 'src/users/entities/user.entity';
 import { GetUser } from 'src/auth/decorators/get-user.decorator';
+import { TICKET_OWNER_ROLE } from './ticket-owner-role';
 
 @Controller('tickets')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -35,8 +36,16 @@ export class TicketsController {
     return this.ticketsService.create(createTicketDto);
   }
 
-@Get()
-  @Roles(UserRole.ADMIN, UserRole.DISPATCHER, UserRole.AMBULANCE, UserRole.SUPER_ADMIN)
+  @Get()
+  @Roles(
+    UserRole.ADMIN,
+    UserRole.DISPATCHER,
+    UserRole.DOCTOR,
+    UserRole.APPOINTMENT_MANAGER,
+    UserRole.MARKETING,
+    UserRole.PARAMEDIC,
+    UserRole.SUPER_ADMIN,
+  )
   findAll(
     @Query(
       new ValidationPipe({
@@ -50,20 +59,44 @@ export class TicketsController {
     return this.ticketsService.findAll(query, user);
   }
 
-@Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.DISPATCHER, UserRole.AMBULANCE, UserRole.SUPER_ADMIN)
+  @Get(':id')
+  @Roles(
+    UserRole.ADMIN,
+    UserRole.DISPATCHER,
+    UserRole.DOCTOR,
+    UserRole.APPOINTMENT_MANAGER,
+    UserRole.MARKETING,
+    UserRole.PARAMEDIC,
+    UserRole.SUPER_ADMIN,
+  )
   findOne(@Param('id', ParseUUIDPipe) id: string, @GetUser() user: User) {
     return this.ticketsService.findOne(id, user);
   }
 
-@Get(':id/history')
-  @Roles(UserRole.ADMIN, UserRole.DISPATCHER, UserRole.AMBULANCE, UserRole.SUPER_ADMIN)
+  @Get(':id/history')
+  @Roles(
+    UserRole.ADMIN,
+    UserRole.DISPATCHER,
+    UserRole.DOCTOR,
+    UserRole.APPOINTMENT_MANAGER,
+    UserRole.MARKETING,
+    UserRole.PARAMEDIC,
+    UserRole.SUPER_ADMIN,
+  )
   getHistory(@Param('id', ParseUUIDPipe) id: string, @GetUser() user: User) {
     return this.ticketsService.getHistory(id, user);
   }
 
-@Get('get-by-reference-number/:referenceNumber')
-  @Roles(UserRole.ADMIN, UserRole.DISPATCHER, UserRole.AMBULANCE, UserRole.SUPER_ADMIN)
+  @Get('get-by-reference-number/:referenceNumber')
+  @Roles(
+    UserRole.ADMIN,
+    UserRole.DISPATCHER,
+    UserRole.DOCTOR,
+    UserRole.APPOINTMENT_MANAGER,
+    UserRole.MARKETING,
+    UserRole.PARAMEDIC,
+    UserRole.SUPER_ADMIN,
+  )
   findByReferenceNumber(
     @Param('referenceNumber', ParseIntPipe) referenceNumber: number,
     @GetUser() user: User,
@@ -71,7 +104,7 @@ export class TicketsController {
     return this.ticketsService.findByReferenceNumber(referenceNumber, user);
   }
 
-@Patch(':id/assign/:ambulanceUnitId')
+  @Patch(':id/assign/:ambulanceUnitId')
   @Roles(UserRole.ADMIN, UserRole.DISPATCHER, UserRole.SUPER_ADMIN)
   assignTicket(
     @Param('id', ParseUUIDPipe) id: string,
@@ -79,11 +112,37 @@ export class TicketsController {
     @GetUser() user: User,
     @Body() { comment }: ActionTicketDto,
   ) {
-    return this.ticketsService.assignTicket(id, ambulanceUnitId, user, comment);
+    return this.ticketsService.assignTicket(
+      id,
+      {
+        ownerRole: TICKET_OWNER_ROLE.PARAMEDIC,
+        ambulanceUnitId,
+        comment,
+      },
+      user,
+    );
   }
 
-@Patch(':id/start')
-  @Roles(UserRole.ADMIN, UserRole.DISPATCHER, UserRole.AMBULANCE, UserRole.SUPER_ADMIN)
+  @Patch(':id/assign')
+  @Roles(UserRole.ADMIN, UserRole.DISPATCHER, UserRole.SUPER_ADMIN)
+  assignTicketToRole(
+    @Param('id', ParseUUIDPipe) id: string,
+    @GetUser() user: User,
+    @Body() action: ActionTicketDto,
+  ) {
+    return this.ticketsService.assignTicket(id, action, user);
+  }
+
+  @Patch(':id/start')
+  @Roles(
+    UserRole.ADMIN,
+    UserRole.DISPATCHER,
+    UserRole.DOCTOR,
+    UserRole.APPOINTMENT_MANAGER,
+    UserRole.MARKETING,
+    UserRole.PARAMEDIC,
+    UserRole.SUPER_ADMIN,
+  )
   startTicket(
     @Param('id', ParseUUIDPipe) id: string,
     @GetUser() user: User,
@@ -92,8 +151,16 @@ export class TicketsController {
     return this.ticketsService.startTicket(id, user, comment);
   }
 
-@Patch(':id/complete')
-  @Roles(UserRole.ADMIN, UserRole.DISPATCHER, UserRole.AMBULANCE, UserRole.SUPER_ADMIN)
+  @Patch(':id/complete')
+  @Roles(
+    UserRole.ADMIN,
+    UserRole.DISPATCHER,
+    UserRole.DOCTOR,
+    UserRole.APPOINTMENT_MANAGER,
+    UserRole.MARKETING,
+    UserRole.PARAMEDIC,
+    UserRole.SUPER_ADMIN,
+  )
   completeTicket(
     @Param('id', ParseUUIDPipe) id: string,
     @GetUser() user: User,
@@ -102,8 +169,16 @@ export class TicketsController {
     return this.ticketsService.completeTicket(id, user, comment);
   }
 
-@Patch(':id/update-note')
-  @Roles(UserRole.ADMIN, UserRole.DISPATCHER, UserRole.AMBULANCE, UserRole.SUPER_ADMIN)
+  @Patch(':id/update-note')
+  @Roles(
+    UserRole.ADMIN,
+    UserRole.DISPATCHER,
+    UserRole.DOCTOR,
+    UserRole.APPOINTMENT_MANAGER,
+    UserRole.MARKETING,
+    UserRole.PARAMEDIC,
+    UserRole.SUPER_ADMIN,
+  )
   updateNote(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() { note }: UpdateNoteTicketDto,
@@ -112,7 +187,7 @@ export class TicketsController {
     return this.ticketsService.updateNote(id, note, user);
   }
 
-@Patch(':id/cancel')
+  @Patch(':id/cancel')
   @Roles(UserRole.ADMIN, UserRole.DISPATCHER, UserRole.SUPER_ADMIN)
   cancelTicket(
     @Param('id', ParseUUIDPipe) id: string,

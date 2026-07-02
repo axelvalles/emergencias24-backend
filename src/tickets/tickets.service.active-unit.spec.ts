@@ -2,7 +2,7 @@ import { ForbiddenException } from '@nestjs/common';
 import { TicketsService } from './tickets.service';
 import { UserRole } from 'src/users/entities/user.entity';
 
-describe('TicketsService active ambulance unit access', () => {
+describe('TicketsService active paramedic unit access', () => {
   function createQueryBuilderMock() {
     return {
       leftJoinAndSelect: jest.fn().mockReturnThis(),
@@ -14,7 +14,7 @@ describe('TicketsService active ambulance unit access', () => {
     };
   }
 
-  it('returns no ticket rows for ambulance users without memberships', async () => {
+  it('returns no ticket rows for paramedic users without memberships', async () => {
     const qb = createQueryBuilderMock();
     const ticketRepository = {
       createQueryBuilder: jest.fn().mockReturnValue(qb),
@@ -25,11 +25,13 @@ describe('TicketsService active ambulance unit access', () => {
       {} as never,
       {} as never,
       {} as never,
+      {} as never,
+      {} as never,
     );
 
     await service.findAll({}, {
-      id: 'ambulance-1',
-      role: UserRole.AMBULANCE,
+      id: 'paramedic-1',
+      role: UserRole.PARAMEDIC,
       ambulanceUnits: [],
       activeAmbulanceUnit: null,
     } as never);
@@ -37,7 +39,7 @@ describe('TicketsService active ambulance unit access', () => {
     expect(qb.andWhere).toHaveBeenCalledWith('1 = 0');
   });
 
-  it('requires an active ambulance unit when user has multiple memberships', async () => {
+  it('requires an active ambulance unit when a paramedic has multiple memberships', async () => {
     const qb = createQueryBuilderMock();
     const ticketRepository = {
       createQueryBuilder: jest.fn().mockReturnValue(qb),
@@ -48,12 +50,14 @@ describe('TicketsService active ambulance unit access', () => {
       {} as never,
       {} as never,
       {} as never,
+      {} as never,
+      {} as never,
     );
 
     await expect(
       service.findAll({}, {
-        id: 'ambulance-2',
-        role: UserRole.AMBULANCE,
+        id: 'paramedic-2',
+        role: UserRole.PARAMEDIC,
         ambulanceUnits: [{ id: 'unit-1' }, { id: 'unit-2' }],
         activeAmbulanceUnit: null,
       } as never),

@@ -11,6 +11,7 @@ import {
 import { Patient } from '../../patients/entities/patient.entity';
 import { uuidv7 } from 'uuidv7';
 import { AmbulanceUnit } from 'src/ambulance-units/entities/ambulance-unit.entity';
+import { TICKET_OWNER_ROLE, type TicketOwnerRole } from '../ticket-owner-role';
 
 export enum ServiceType {
   IMMEDIATE_ATTENTION = 'immediate_attention',
@@ -19,6 +20,8 @@ export enum ServiceType {
   MEDICAL_CONSULTATION = 'medical_consultation',
   AMBULANCE = 'ambulance',
   LABORATORY = 'laboratory',
+  STUDY_TRANSFER = 'study_transfer',
+  IMAGING = 'imaging',
   APPOINTMENT = 'appointment',
   EQUIPMENT_RENTAL = 'equipment_rental',
   PLANS = 'plans',
@@ -41,6 +44,8 @@ export enum Priority {
 @Entity('tickets')
 @Index('IDX_TICKETS_STATUS_CREATED', ['status', 'createdAt'])
 @Index('IDX_TICKETS_ASSIGNED', ['assignedUnit', 'status'])
+@Index('IDX_TICKETS_OWNER_ROLE_STATUS', ['currentOwnerRole', 'status'])
+@Index('IDX_TICKETS_OWNER_ROLE_CREATED', ['currentOwnerRole', 'createdAt'])
 @Index('IDX_TICKETS_PATIENT', ['patient'])
 export class Ticket {
   @PrimaryColumn('uuid')
@@ -73,6 +78,13 @@ export class Ticket {
     default: Priority.MEDIUM,
   })
   priority: Priority;
+
+  @Column({
+    type: 'enum',
+    enum: TICKET_OWNER_ROLE,
+    nullable: true,
+  })
+  currentOwnerRole?: TicketOwnerRole | null;
 
   @ManyToOne(() => Patient, {
     nullable: true,
@@ -108,10 +120,10 @@ export class Ticket {
   assignedUnit?: AmbulanceUnit | null;
 
   @Column({ type: 'timestamp', nullable: true })
-  assignedAt?: Date;
+  assignedAt?: Date | null;
 
   @Column({ type: 'timestamp', nullable: true })
-  completedAt?: Date;
+  completedAt?: Date | null;
 
   @CreateDateColumn()
   createdAt: Date;

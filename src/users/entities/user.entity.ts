@@ -18,7 +18,10 @@ export enum UserRole {
   SUPER_ADMIN = 'super-admin',
   ADMIN = 'admin',
   DISPATCHER = 'dispatcher',
-  AMBULANCE = 'ambulance',
+  PARAMEDIC = 'paramedic',
+  DOCTOR = 'doctor',
+  APPOINTMENT_MANAGER = 'appointment_manager',
+  MARKETING = 'marketing',
 }
 
 export enum UserStatus {
@@ -70,10 +73,14 @@ export class User {
   @ManyToMany(() => AmbulanceUnit, (ambulanceUnit) => ambulanceUnit.members)
   ambulanceUnits: AmbulanceUnit[];
 
-  @ManyToOne(() => AmbulanceUnit, (ambulanceUnit) => ambulanceUnit.activeUsers, {
-    nullable: true,
-    onDelete: 'SET NULL',
-  })
+  @ManyToOne(
+    () => AmbulanceUnit,
+    (ambulanceUnit) => ambulanceUnit.activeUsers,
+    {
+      nullable: true,
+      onDelete: 'SET NULL',
+    },
+  )
   @JoinColumn({ name: 'activeAmbulanceUnitId' })
   activeAmbulanceUnit?: AmbulanceUnit | null;
 

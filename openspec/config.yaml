@@ -1,0 +1,62 @@
+schema: spec-driven
+
+context: |
+  Tech stack: NestJS 11 backend on Node.js 22 with TypeScript and pnpm.
+  Architecture: Feature modules under `src/` with Nest controllers/services/modules and TypeORM entities.
+  Testing: Jest + ts-jest for colocated `src/**/*.spec.ts` tests and `test/*.e2e-spec.ts` e2e flows.
+  Style: ESLint 9, Prettier, CRLF endings, single quotes, trailing commas, `src/*` path alias.
+
+rules:
+  proposal:
+    - Include rollback notes for database, Redis, or messaging changes.
+  specs:
+    - Use Given/When/Then scenarios.
+    - Use RFC 2119 keywords.
+  design:
+    - Document Nest module boundaries and infrastructure dependencies.
+    - Call out TypeORM, Redis, and Twilio integration impact explicitly.
+  tasks:
+    - Keep tasks scoped to one module or vertical slice.
+    - Keep test updates with the code they verify.
+  apply:
+    notes:
+      - Follow the existing feature-module layout in `src/`.
+      - Keep unit/integration specs colocated as `*.spec.ts`; keep e2e specs in `test/`.
+    tdd: true
+    test_command: 'pnpm test'
+  verify:
+    test_command: 'pnpm test && pnpm test:e2e'
+    build_command: 'pnpm build'
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive schema or bot-flow deltas.
+
+testing:
+  strict_tdd: true
+  detected: 2026-06-24
+  runner:
+    command: pnpm test
+    framework: Jest 29 with ts-jest
+  layers:
+    unit:
+      available: true
+      tool: Jest
+    integration:
+      available: true
+      tool: Jest with @nestjs/testing and Supertest
+    e2e:
+      available: true
+      tool: Jest with test/jest-e2e.json and Supertest
+  coverage:
+    available: true
+    command: pnpm test:cov
+  quality:
+    linter:
+      available: true
+      command: pnpm lint
+    type_checker:
+      available: true
+      command: pnpm typecheck
+    formatter:
+      available: true
+      command: pnpm format
