@@ -6,6 +6,7 @@ import { PatientsService } from '../patients/patients.service';
 import { TicketsService } from '../tickets/tickets.service';
 import { MunicipalityPricingService } from '../municipality-pricing/municipality-pricing.service';
 import { BOT_STATES } from './state-machine/types';
+import { BotSession } from './interfaces/bot-session.interface';
 
 describe('BotService', () => {
   let service: BotService;
@@ -18,6 +19,7 @@ describe('BotService', () => {
   const sessionStoreMock = {
     getSession: jest.fn(),
     setSession: jest.fn(),
+    setMunicipality: jest.fn(),
     setCurentState: jest.fn(),
   };
 
@@ -87,6 +89,47 @@ describe('BotService', () => {
       expect.objectContaining({
         currentState: BOT_STATES.HOME_CARE_WAITING_DOMICILE_CONFIRMATION,
         previousState: BOT_STATES.HOME_CARE_WAITING_LOCATION,
+      }),
+    );
+  });
+
+  it('preserves a municipality persisted by the home-care handler', async () => {
+    const currentSession: BotSession = {
+      currentState: BOT_STATES.HOME_CARE_WAITING_MUNICIPALITY,
+      from: '584120000000',
+      lastInteraction: new Date().toISOString(),
+      previousState: BOT_STATES.WAITING_MENU_OPTION,
+      patient: null,
+    };
+
+    let persistedSession = currentSession;
+    sessionStoreMock.getSession.mockImplementation(async () => persistedSession);
+    sessionStoreMock.setMunicipality.mockImplementation(
+      async (_from: string, municipality: string) => {
+        persistedSession = { ...persistedSession, municipality };
+      },
+    );
+    municipalityPricingServiceMock.getCostByMunicipality.mockResolvedValue(25);
+
+    await service.handleMessage({
+      from: '584120000000',
+      body: '1',
+      profileName: 'Ana',
+      location: null,
+      mediaUrl: null,
+      mediaContentType: null,
+      interactiveReplyId: null,
+    });
+
+    expect(sessionStoreMock.setMunicipality).toHaveBeenCalledWith(
+      '584120000000',
+      'Mariño',
+    );
+    expect(sessionStoreMock.setSession).toHaveBeenLastCalledWith(
+      '584120000000',
+      expect.objectContaining({
+        currentState: BOT_STATES.HOME_CARE_WAITING_DOMICILE_CONFIRMATION,
+        municipality: 'Mariño',
       }),
     );
   });

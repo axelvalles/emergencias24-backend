@@ -67,7 +67,6 @@ export class BotService {
 
         await this.persistSessionTransition(
           from,
-          userState,
           userState.currentState,
           nextState,
         );
@@ -98,7 +97,6 @@ export class BotService {
 
       await this.persistSessionTransition(
         from,
-        userState,
         userState.currentState,
         result.nextState,
       );
@@ -112,7 +110,6 @@ export class BotService {
 
     await this.persistSessionTransition(
       from,
-      userState,
       userState.currentState,
       result.nextState,
       profileName,
@@ -121,7 +118,6 @@ export class BotService {
 
   private async persistSessionTransition(
     from: string,
-    currentSession: Awaited<ReturnType<SessionStoreService['getSession']>>,
     currentState: BotStates,
     requestedNextState: BotStates,
     profileName = '',
@@ -134,8 +130,10 @@ export class BotService {
       nextState = BOT_STATES.WAITING_MENU_OPTION;
     }
 
+    const latestSession = await this.sessionStore.getSession(from);
+
     await this.sessionStore.setSession(from, {
-      ...currentSession,
+      ...latestSession,
       currentState: nextState,
       from,
       lastInteraction: new Date().toISOString(),
@@ -143,11 +141,11 @@ export class BotService {
       municipality:
         nextState === BOT_STATES.WAITING_MENU_OPTION
           ? undefined
-          : currentSession.municipality,
+          : latestSession.municipality,
       speciality:
         nextState === BOT_STATES.WAITING_MENU_OPTION
           ? undefined
-          : currentSession.speciality,
+          : latestSession.speciality,
     });
   }
 }
