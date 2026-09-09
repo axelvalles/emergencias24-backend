@@ -32,7 +32,7 @@ export class UsersController {
   }
 
   @Get('search')
-  @Roles(UserRole.ADMIN, UserRole.DISPATCHER)
+  @Roles(UserRole.ADMIN)
   search(
     @Query(
       new ValidationPipe({
@@ -46,7 +46,7 @@ export class UsersController {
   }
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.DISPATCHER, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   findAll(
     @Query(
       new ValidationPipe({
@@ -60,7 +60,7 @@ export class UsersController {
   }
 
   @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.DISPATCHER, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   findOne(@Param('id') id: string) {
     return this.usersService.findOne(id);
   }

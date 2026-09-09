@@ -18,6 +18,15 @@ import { TicketsService } from '../tickets/tickets.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { UserRole } from '../users/entities/user.entity';
+import { PatientsController } from '../patients/patients.controller';
+import { PatientsService } from '../patients/patients.service';
+import { PatientsImportService } from '../patients/patients-import.service';
+import { BenefitsController } from '../benefits/benefits.controller';
+import { BenefitsService } from '../benefits/benefits.service';
+import { UsersController } from '../users/users.controller';
+import { UsersService } from '../users/users.service';
+import { AmbulanceUnitsController } from '../ambulance-units/ambulance-units.controller';
+import { AmbulanceUnitsService } from '../ambulance-units/ambulance-units.service';
 
 type TestUser = {
   id: string;
@@ -100,6 +109,50 @@ describe('AuthZ HTTP integration matrix', () => {
     cancelTicket: jest.fn(),
   };
 
+  const patientsServiceMock = {
+    create: jest.fn(),
+    findAll: jest.fn().mockResolvedValue({ data: [], total: 0 }),
+    findOne: jest.fn(),
+    findByDocument: jest.fn(),
+    update: jest.fn(),
+    updateStatus: jest.fn(),
+    remove: jest.fn(),
+  };
+
+  const patientsImportServiceMock = {
+    generateTemplate: jest.fn(),
+    importPatients: jest.fn(),
+  };
+
+  const benefitsServiceMock = {
+    create: jest.fn(),
+    findAll: jest.fn().mockResolvedValue({ data: [], total: 0 }),
+    findOne: jest.fn(),
+    update: jest.fn(),
+    remove: jest.fn(),
+  };
+
+  const usersServiceMock = {
+    create: jest.fn(),
+    search: jest.fn().mockResolvedValue([]),
+    findAll: jest.fn().mockResolvedValue({ data: [], total: 0 }),
+    findOne: jest.fn(),
+    update: jest.fn(),
+    remove: jest.fn(),
+    activateUser: jest.fn(),
+    deactivateUser: jest.fn(),
+  };
+
+  const ambulanceUnitsServiceMock = {
+    create: jest.fn(),
+    search: jest.fn().mockResolvedValue([]),
+    findAll: jest.fn().mockResolvedValue({ data: [], total: 0 }),
+    findOne: jest.fn(),
+    deleteUnit: jest.fn(),
+    update: jest.fn(),
+    setActiveUnit: jest.fn(),
+  };
+
   beforeAll(async () => {
     const moduleBuilder = Test.createTestingModule({
       controllers: [
@@ -107,6 +160,10 @@ describe('AuthZ HTTP integration matrix', () => {
         PlansController,
         PlanSubscriptionsController,
         TicketsController,
+        PatientsController,
+        BenefitsController,
+        UsersController,
+        AmbulanceUnitsController,
       ],
       providers: [
         { provide: CompaniesService, useValue: companiesServiceMock },
@@ -116,6 +173,17 @@ describe('AuthZ HTTP integration matrix', () => {
           useValue: planSubscriptionsServiceMock,
         },
         { provide: TicketsService, useValue: ticketsServiceMock },
+        { provide: PatientsService, useValue: patientsServiceMock },
+        {
+          provide: PatientsImportService,
+          useValue: patientsImportServiceMock,
+        },
+        { provide: BenefitsService, useValue: benefitsServiceMock },
+        { provide: UsersService, useValue: usersServiceMock },
+        {
+          provide: AmbulanceUnitsService,
+          useValue: ambulanceUnitsServiceMock,
+        },
         Reflector,
         { provide: RolesGuard, useClass: TestRolesGuard },
       ],
@@ -158,13 +226,53 @@ describe('AuthZ HTTP integration matrix', () => {
     await request(app.getHttpServer()).get('/tickets').expect(401);
   });
 
-  it('returns 200 for dispatcher on allowed read endpoints', async () => {
+  it('allows dispatcher to read only patients, subscriptions, tickets, and assignment unit search', async () => {
     authState.currentUser = { id: 'dispatcher-1', role: UserRole.DISPATCHER };
 
-    await request(app.getHttpServer()).get('/companies').expect(200);
-    await request(app.getHttpServer()).get('/plans').expect(200);
+    await request(app.getHttpServer()).get('/patients').expect(200);
     await request(app.getHttpServer()).get('/plan-subscriptions').expect(200);
     await request(app.getHttpServer()).get('/tickets').expect(200);
+    await request(app.getHttpServer())
+      .get('/ambulance-units/search')
+      .expect(200);
+  });
+
+  it('denies dispatcher access to unrelated management reads', async () => {
+    authState.currentUser = { id: 'dispatcher-1', role: UserRole.DISPATCHER };
+
+    await request(app.getHttpServer()).get('/companies').expect(403);
+    await request(app.getHttpServer()).get('/plans').expect(403);
+    await request(app.getHttpServer()).get('/benefits').expect(403);
+    await request(app.getHttpServer()).get('/users').expect(403);
+    await request(app.getHttpServer()).get('/users/search').expect(403);
+    await request(app.getHttpServer()).get('/ambulance-units').expect(403);
+    await request(app.getHttpServer())
+      .get('/ambulance-units/019e79f9-9941-758b-9bd2-18f4d1da9148')
+      .expect(403);
+  });
+
+  it('keeps patients and subscriptions read-only for dispatcher', async () => {
+    authState.currentUser = { id: 'dispatcher-1', role: UserRole.DISPATCHER };
+
+    await request(app.getHttpServer()).post('/patients').send({}).expect(403);
+    await request(app.getHttpServer())
+      .patch('/patients/019e79f9-9941-758b-9bd2-18f4d1da9148')
+      .send({})
+      .expect(403);
+    await request(app.getHttpServer())
+      .delete('/patients/019e79f9-9941-758b-9bd2-18f4d1da9148')
+      .expect(403);
+    await request(app.getHttpServer())
+      .post('/plan-subscriptions')
+      .send({})
+      .expect(403);
+    await request(app.getHttpServer())
+      .patch('/plan-subscriptions/019e79f9-9941-758b-9bd2-18f4d1da9148')
+      .send({})
+      .expect(403);
+    await request(app.getHttpServer())
+      .delete('/plan-subscriptions/019e79f9-9941-758b-9bd2-18f4d1da9148')
+      .expect(403);
   });
 
   it('returns 200 for operational roles on ticket read endpoints added by role routing', async () => {

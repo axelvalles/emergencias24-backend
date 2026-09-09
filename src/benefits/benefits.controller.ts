@@ -30,13 +30,13 @@ export class BenefitsController {
   }
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.DISPATCHER, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   findAll(@Query() query: QueryBenefitsDto) {
     return this.benefitsService.findAll(query);
   }
 
   @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.DISPATCHER, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   findOne(@Param('id') id: string) {
     return this.benefitsService.findOne(id);
   }

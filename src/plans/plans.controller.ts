@@ -31,13 +31,13 @@ export class PlansController {
   }
 
 @Get()
-  @Roles(UserRole.ADMIN, UserRole.DISPATCHER, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   findAll(@Query() query: QueryPlansDto) {
     return this.plansService.findAll(query);
   }
 
 @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.DISPATCHER, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   findOne(@Param('id') id: string) {
     return this.plansService.findOne(id);
   }

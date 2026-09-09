@@ -26,10 +26,10 @@ describe('CompaniesController security metadata', () => {
         ROLES_KEY,
         CompaniesController.prototype.findWithPagination,
       ),
-    ).toEqual([UserRole.ADMIN, UserRole.DISPATCHER, UserRole.SUPER_ADMIN]);
+    ).toEqual([UserRole.ADMIN, UserRole.SUPER_ADMIN]);
     expect(
       Reflect.getMetadata(ROLES_KEY, CompaniesController.prototype.findOne),
-    ).toEqual([UserRole.ADMIN, UserRole.DISPATCHER, UserRole.SUPER_ADMIN]);
+    ).toEqual([UserRole.ADMIN, UserRole.SUPER_ADMIN]);
     expect(
       Reflect.getMetadata(ROLES_KEY, CompaniesController.prototype.update),
     ).toEqual([UserRole.ADMIN, UserRole.SUPER_ADMIN]);

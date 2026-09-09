@@ -31,13 +31,13 @@ export class CompaniesController {
   }
 
 @Get()
-  @Roles(UserRole.ADMIN, UserRole.DISPATCHER, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   findWithPagination(@Query() query: QueryCompaniesDto) {
     return this.companiesService.findWithPagination(query);
   }
 
 @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.DISPATCHER, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   findOne(@Param('id') id: string) {
     return this.companiesService.findOne(id);
   }
