@@ -5,10 +5,13 @@ describe('AmbulanceUnitsService', () => {
   function createQueryBuilderMock() {
     return {
       leftJoinAndSelect: jest.fn().mockReturnThis(),
+      innerJoinAndSelect: jest.fn().mockReturnThis(),
       andWhere: jest.fn().mockReturnThis(),
       addOrderBy: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
       skip: jest.fn().mockReturnThis(),
       take: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue([]),
       getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
     };
   }
@@ -175,6 +178,27 @@ describe('AmbulanceUnitsService', () => {
 
       expect(result.page).toBe(1);
       expect(qb.skip).toHaveBeenCalledWith(0);
+    });
+  });
+
+  describe('search', () => {
+    it('excludes units without members from assignment search', async () => {
+      const qb = createQueryBuilderMock();
+      const ambulanceUnitRepository = createAmbulanceUnitRepositoryMock();
+      ambulanceUnitRepository.createQueryBuilder.mockReturnValue(qb);
+
+      const service = new AmbulanceUnitsService(
+        ambulanceUnitRepository as never,
+        createUserRepositoryMock() as never,
+      );
+
+      await service.search({});
+
+      expect(qb.innerJoinAndSelect).toHaveBeenCalledWith(
+        'ambulanceUnit.members',
+        'member',
+      );
+      expect(qb.leftJoinAndSelect).not.toHaveBeenCalled();
     });
   });
 

@@ -196,6 +196,40 @@ describe('TicketsService owner-role routing', () => {
     expect(updatedTicket.assignedAt).toBeNull();
   });
 
+  it('rejects a forged assignment to an ambulance unit without members', async () => {
+    const ticketRepository = createTicketRepositoryMock();
+    ticketRepository.findOne.mockResolvedValue({
+      id: 'ticket-empty-unit',
+      status: TicketStatus.PENDING,
+      currentOwnerRole: TICKET_OWNER_ROLE.DISPATCHER,
+      assignedUnit: null,
+    });
+
+    const service = new TicketsService(
+      ticketRepository as never,
+      createHistoryRepositoryMock() as never,
+      createHandoffRepositoryMock() as never,
+      createGatewayMock() as never,
+      {
+        findOne: jest.fn().mockResolvedValue({
+          id: 'unit-empty',
+          members: [],
+        }),
+      } as never,
+      createPolicyMock() as never,
+    );
+
+    await expect(
+      service.assignTicket('ticket-empty-unit', {
+        ownerRole: TICKET_OWNER_ROLE.PARAMEDIC,
+        ambulanceUnitId: 'unit-empty',
+      }),
+    ).rejects.toThrow(
+      'Tickets can only be assigned to ambulance units with at least one member',
+    );
+    expect(ticketRepository.save).not.toHaveBeenCalled();
+  });
+
   it('stores a handoff audit row when ownership changes', async () => {
     const ticketRepository = createTicketRepositoryMock();
     const historyRepository = createHistoryRepositoryMock();

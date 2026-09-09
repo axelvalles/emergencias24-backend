@@ -82,7 +82,7 @@ export class AmbulanceUnitsService {
     const { term, limit = 10 } = dto;
     const queryBuilder = this.ambulanceUnitRepository
       .createQueryBuilder('ambulanceUnit')
-      .leftJoinAndSelect('ambulanceUnit.members', 'member')
+      .innerJoinAndSelect('ambulanceUnit.members', 'member')
       .orderBy('ambulanceUnit.name', 'ASC')
       .take(limit);
 
