@@ -10,7 +10,10 @@ This backlog contains four product defects, three requested workflow changes, on
 | 3. Empty-unit assignment | Fixed and verified | 21 focused backend tests pass; assignment search excludes empty units and forged assignments remain rejected. |
 | 5. Missing municipality | Fixed and verified | 8 focused bot tests pass; transition persistence now merges the latest handler-updated session. |
 | 6. Handoff terminology | Fixed, pending browser run | Web-admin build passes; audit data is preserved and presentation is localized. |
-| 2, 4, 7, 8 | Not started | These are feature/workflow/access changes rather than reproduced product defects. |
+| 4. Requester contact actions | Fixed and verified | Web-admin build passes; committed as `05cf768`. |
+| 7. Patient-only bulk import | Fixed and verified | 5 focused tests and backend typecheck pass; committed as `5de0d50`. |
+| 8. Operator access boundary | Fixed and verified | Backend authorization tests pass 14/14; frontend policy tests pass 3/3; committed as `b52a64b` and `6660b68`. |
+| 2. Third-party payer model | Deferred | Requires an additive contract/payer/beneficiary schema redesign and migration. |
 | 9. Test-ticket cleanup | Deferred | Prepare guarded Neon SQL after application work is complete and ticket IDs are confirmed. |
 
 ## Recommended implementation order
