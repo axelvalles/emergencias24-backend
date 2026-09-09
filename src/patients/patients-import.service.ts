@@ -1,20 +1,9 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import * as ExcelJS from 'exceljs';
 import { Response } from 'express';
-import { CompaniesService } from 'src/companies/services/companies.service';
-import { PlansService } from 'src/plans/services/plans.service';
-import { PatientsService } from './patients.service';
-import { PlanSubscriptionsService } from '../plans/services/plan-subscriptions.service';
-import {
-  PayerType,
-  PlanSubscription,
-  PlanSubscriptionStatus,
-} from '../plans/entities/plan-subscription.entity';
 import { PatientImportErrorCode } from './exeptions/patient-import.exception';
 import { DocumentType, Gender, Patient } from './entities/patient.entity';
-import { DataSource, EntityManager } from 'typeorm';
-import { Plan, PlanType } from 'src/plans/entities/plan.entity';
-import { Company } from 'src/companies/entities/company.entity';
+import { DataSource } from 'typeorm';
 
 const DOCUMENT_TYPE_MAP = {
   [DocumentType.CC]: 'CC',
@@ -44,13 +33,7 @@ const BATCH_SIZE = 100;
 
 @Injectable()
 export class PatientsImportService {
-  constructor(
-    private readonly plansService: PlansService,
-    private readonly companiesService: CompaniesService,
-    private readonly patientsService: PatientsService,
-    private readonly planSubscriptionsService: PlanSubscriptionsService,
-    private dataSource: DataSource,
-  ) {}
+  constructor(private dataSource: DataSource) {}
 
   private applyDropdown(
     sheet: ExcelJS.Worksheet,
@@ -90,54 +73,7 @@ export class PatientsImportService {
       { header: 'Género', key: 'gender', width: 15 },
       { header: 'Teléfono', key: 'phone', width: 18 },
       { header: 'Ciudad', key: 'city', width: 18 },
-      { header: 'Plan', key: 'plan', width: 25 },
-      { header: 'Empresa', key: 'company', width: 25 },
     ];
-
-    /* ======================
-       Plans sheet
-    ====================== */
-    const plansSheet = workbook.addWorksheet('Planes');
-    plansSheet.columns = [
-      { header: 'ID', key: 'id', width: 36 },
-      { header: 'Nombre', key: 'name', width: 30 },
-      { header: 'Tipo', key: 'planType', width: 20 },
-    ];
-
-    // Paginated loading for plans to prevent OOM
-    let plansPage = 1;
-    let hasMorePlans = true;
-    while (hasMorePlans) {
-      const plansChunk = await this.plansService.findAllActivePaginated(
-        plansPage,
-        BATCH_SIZE,
-      );
-      plansChunk.data.forEach((plan) => plansSheet.addRow(plan));
-      hasMorePlans = plansChunk.data.length === BATCH_SIZE;
-      plansPage++;
-    }
-
-    /* ======================
-       Companies sheet
-    ====================== */
-    const companiesSheet = workbook.addWorksheet('Empresas');
-    companiesSheet.columns = [
-      { header: 'ID', key: 'id', width: 36 },
-      { header: 'Nombre', key: 'name', width: 30 },
-    ];
-
-    // Paginated loading for companies to prevent OOM
-    let companiesPage = 1;
-    let hasMoreCompanies = true;
-    while (hasMoreCompanies) {
-      const companiesChunk = await this.companiesService.findAllPaginated(
-        companiesPage,
-        BATCH_SIZE,
-      );
-      companiesChunk.data.forEach((company) => companiesSheet.addRow(company));
-      hasMoreCompanies = companiesChunk.data.length === BATCH_SIZE;
-      companiesPage++;
-    }
 
     /* ======================
        Metadata sheet
@@ -181,32 +117,6 @@ export class PatientsImportService {
       true,
     );
 
-    // Plan
-    this.applyDropdown(
-      patientsSheet,
-      'I',
-      2,
-      lastRow,
-      '=Planes!$B$2:$B$100',
-      true,
-    );
-
-    // Company
-    this.applyDropdown(
-      patientsSheet,
-      'J',
-      2,
-      lastRow,
-      '=Empresas!$B$2:$B$100',
-      true,
-    );
-
-    /* ======================
-       Response
-    ====================== */
-
-    await plansSheet.protect('readonly', {});
-    await companiesSheet.protect('readonly', {});
     await metadataSheet.protect('readonly', {});
 
     /* ======================
@@ -247,38 +157,6 @@ export class PatientsImportService {
       });
     }
 
-    // Build maps in chunks to prevent OOM
-    const planMap = new Map<string, Plan>();
-    const companyMap = new Map<string, Company>();
-
-    // Load plans in batches
-    let plansPage = 1;
-    let hasMorePlans = true;
-    while (hasMorePlans) {
-      const plansChunk = await this.plansService.findAllActivePaginated(
-        plansPage,
-        BATCH_SIZE,
-      );
-      plansChunk.data.forEach((plan) => planMap.set(plan.name, plan));
-      hasMorePlans = plansChunk.data.length === BATCH_SIZE;
-      plansPage++;
-    }
-
-    // Load companies in batches
-    let companiesPage = 1;
-    let hasMoreCompanies = true;
-    while (hasMoreCompanies) {
-      const companiesChunk = await this.companiesService.findAllPaginated(
-        companiesPage,
-        BATCH_SIZE,
-      );
-      companiesChunk.data.forEach((company) =>
-        companyMap.set(company.name, company),
-      );
-      hasMoreCompanies = companiesChunk.data.length === BATCH_SIZE;
-      companiesPage++;
-    }
-
     const errors: {
       row: number;
       code: PatientImportErrorCode;
@@ -303,8 +181,6 @@ export class PatientsImportService {
 
           try {
             const patientRepository = manager.getRepository(Patient);
-            const planSubscriptionsRepository =
-              manager.getRepository(PlanSubscription);
 
             const getValue = (col: number): string | undefined => {
               const v = row.getCell(col).value;
@@ -321,8 +197,6 @@ export class PatientsImportService {
             const genderStr = getValue(6);
             const phone = getValue(7);
             const city = getValue(8);
-            const planName = getValue(9);
-            const companyName = getValue(10);
 
             if (
               !firstName ||
@@ -401,66 +275,6 @@ export class PatientsImportService {
 
             await patientRepository.save(patient);
 
-            if (planName) {
-              const plan = planMap.get(planName);
-
-              if (!plan) {
-                errors.push({
-                  row: rowNumber,
-                  code: PatientImportErrorCode.PLAN_NOT_FOUND,
-                  message: 'Plan no encontrado',
-                });
-                throw new Error(); // rollback fila
-              }
-
-              if (plan.planType === PlanType.FAMILY) {
-                const hasFamilyPlan = await this.hasActiveFamilyPlan(
-                  patient.id,
-                  manager,
-                );
-
-                if (hasFamilyPlan) {
-                  errors.push({
-                    row: rowNumber,
-                    code: PatientImportErrorCode.MULTIPLE_FAMILY_PLANS,
-                    message: 'El paciente ya tiene un plan familiar activo',
-                  });
-                  throw new Error();
-                }
-              }
-
-              let companyId: string | null = null;
-
-              if (companyName) {
-                const company = companyMap.get(companyName);
-                if (!company) {
-                  errors.push({
-                    row: rowNumber,
-                    code: PatientImportErrorCode.COMPANY_NOT_FOUND,
-                    message: 'Empresa no encontrada',
-                  });
-                  throw new Error();
-                }
-                companyId = company.id;
-              }
-
-              const planSubscription = planSubscriptionsRepository.create({
-                payerType: PayerType.PATIENT,
-                startDate: new Date(),
-              });
-
-              planSubscription.patient = patient;
-
-              planSubscription.plan = plan;
-
-              if (companyId) {
-                const company = await this.companiesService.findOne(companyId);
-                planSubscription.company = company;
-              }
-
-              await planSubscriptionsRepository.save(planSubscription);
-            }
-
             imported++;
           } catch {
             // rollback automático de la transacción
@@ -474,27 +288,5 @@ export class PatientsImportService {
       failed: errors.length,
       errors,
     };
-  }
-
-  private async hasActiveFamilyPlan(
-    patientId: string,
-    manager: EntityManager,
-  ): Promise<boolean> {
-    const planSubscriptionsRepository = manager.getRepository(PlanSubscription);
-
-    const count = await planSubscriptionsRepository
-      .createQueryBuilder('ps')
-      .innerJoin('ps.plan', 'plan')
-      .where('plan.planType = :planType', { planType: PlanType.FAMILY })
-      .andWhere('(ps.patientId = :patientId)', { patientId })
-      .andWhere('ps.status IN (:...statuses)', {
-        statuses: [
-          PlanSubscriptionStatus.ACTIVE,
-          PlanSubscriptionStatus.SUSPENDED,
-        ],
-      })
-      .getCount();
-
-    return count > 0;
   }
 }
