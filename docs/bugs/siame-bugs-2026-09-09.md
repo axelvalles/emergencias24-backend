@@ -11,7 +11,7 @@ This backlog contains four product defects, three requested workflow changes, on
 | 5. Missing municipality | Fixed and verified | 8 focused bot tests pass; transition persistence now merges the latest handler-updated session. |
 | 6. Handoff terminology | Fixed, pending browser run | Web-admin build passes; audit data is preserved and presentation is localized. |
 | 4. Requester contact actions | Fixed and verified | Web-admin build passes; committed as `05cf768`. |
-| 7. Patient-only bulk import | Fixed and verified | 5 focused tests and backend typecheck pass; committed as `5de0d50`. |
+| 7. Secure company-scoped patient import | Fixed and verified | Workbook remains catalog-free; company and plan are selected in SIAME. Backend 15 tests and frontend 6 policy tests pass; committed as `5de0d50`, `76cd3e4`, and `58e7f45`. |
 | 8. Operator access boundary | Fixed and verified | Backend authorization tests pass 14/14; frontend policy tests pass 3/3; committed as `b52a64b` and `6660b68`. |
 | 2. Third-party payer model | Deferred | Requires an additive contract/payer/beneficiary schema redesign and migration. |
 | 9. Test-ticket cleanup | Deferred | Prepare guarded Neon SQL after application work is complete and ticket IDs are confirmed. |
