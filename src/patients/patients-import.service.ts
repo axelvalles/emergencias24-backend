@@ -4,6 +4,14 @@ import { Response } from 'express';
 import { PatientImportErrorCode } from './exeptions/patient-import.exception';
 import { DocumentType, Gender, Patient } from './entities/patient.entity';
 import { DataSource } from 'typeorm';
+import { Company, CompanyStatus } from '../companies/entities/company.entity';
+import { Plan, PlanStatus } from '../plans/entities/plan.entity';
+import {
+  PayerType,
+  PlanSubscription,
+  PlanSubscriptionStatus,
+} from '../plans/entities/plan-subscription.entity';
+import { ImportPatientsDto } from './dto/import-patients.dto';
 
 const DOCUMENT_TYPE_MAP = {
   [DocumentType.CC]: 'CC',
@@ -135,11 +143,34 @@ export class PatientsImportService {
     res.end();
   }
 
-  async importPatients(file: Express.Multer.File) {
+  async importPatients(file: Express.Multer.File, context: ImportPatientsDto) {
     if (!file || !file.buffer || !Buffer.isBuffer(file.buffer)) {
       throw new BadRequestException({
         code: PatientImportErrorCode.FILE_INVALID,
         message: 'Archivo inválido',
+      });
+    }
+
+    const [company, plan] = await Promise.all([
+      this.dataSource.getRepository(Company).findOne({
+        where: { id: context.companyId, status: CompanyStatus.ACTIVE },
+      }),
+      this.dataSource.getRepository(Plan).findOne({
+        where: { id: context.planId, status: PlanStatus.ACTIVE },
+      }),
+    ]);
+
+    if (!company || company.status !== CompanyStatus.ACTIVE) {
+      throw new BadRequestException({
+        code: PatientImportErrorCode.COMPANY_NOT_FOUND,
+        message: 'La empresa seleccionada no existe o está inactiva',
+      });
+    }
+
+    if (!plan || plan.status !== PlanStatus.ACTIVE) {
+      throw new BadRequestException({
+        code: PatientImportErrorCode.PLAN_NOT_FOUND,
+        message: 'El plan seleccionado no existe o está inactivo',
       });
     }
 
@@ -180,8 +211,6 @@ export class PatientsImportService {
           const row = patientsSheet.getRow(rowNumber);
 
           try {
-            const patientRepository = manager.getRepository(Patient);
-
             const getValue = (col: number): string | undefined => {
               const v = row.getCell(col).value;
               if (v === null || v === undefined) return undefined;
@@ -205,7 +234,12 @@ export class PatientsImportService {
               !documentNumber ||
               !genderStr
             ) {
-              return;
+              errors.push({
+                row: rowNumber,
+                code: PatientImportErrorCode.REQUIRED_FIELDS_MISSING,
+                message: 'Faltan campos obligatorios',
+              });
+              continue;
             }
 
             const documentType = DOCUMENT_TYPE_REVERSE_MAP[documentTypeStr];
@@ -216,7 +250,7 @@ export class PatientsImportService {
                 code: PatientImportErrorCode.INVALID_DOCUMENT_TYPE,
                 message: 'Tipo de documento inválido',
               });
-              return;
+              continue;
             }
 
             const gender = GENDER_REVERSE_MAP[genderStr];
@@ -227,7 +261,7 @@ export class PatientsImportService {
                 code: PatientImportErrorCode.INVALID_GENDER,
                 message: 'Género inválido',
               });
-              return;
+              continue;
             }
 
             let birthDate: Date | undefined;
@@ -244,40 +278,62 @@ export class PatientsImportService {
                   code: PatientImportErrorCode.INVALID_BIRTH_DATE,
                   message: 'Fecha de nacimiento inválida',
                 });
-                return;
+                continue;
               }
               birthDate = parsed;
             }
 
-            const existing = await patientRepository.findOne({
-              where: { documentNumber },
+            const persisted = await manager.transaction(async (rowManager) => {
+              const patientRepository = rowManager.getRepository(Patient);
+              const subscriptionRepository =
+                rowManager.getRepository(PlanSubscription);
+              const existing = await patientRepository.findOne({
+                where: { documentNumber },
+              });
+
+              if (existing) return false;
+
+              const patient = patientRepository.create({
+                firstName,
+                lastName,
+                documentType,
+                documentNumber,
+                gender,
+                phone,
+                city,
+                birthDate,
+                company,
+              });
+              const savedPatient = await patientRepository.save(patient);
+              const subscription = subscriptionRepository.create({
+                patient: savedPatient,
+                plan,
+                company,
+                payerType: PayerType.COMPANY,
+                status: PlanSubscriptionStatus.ACTIVE,
+                startDate: new Date(),
+                endDate: null,
+              });
+              await subscriptionRepository.save(subscription);
+              return true;
             });
 
-            if (existing) {
+            if (!persisted) {
               errors.push({
                 row: rowNumber,
                 code: PatientImportErrorCode.PATIENT_ALREADY_EXISTS,
                 message: 'El paciente ya existe',
               });
-              return;
+              continue;
             }
-
-            const patient = patientRepository.create({
-              firstName,
-              lastName,
-              documentType,
-              documentNumber,
-              gender,
-              phone,
-              city,
-              birthDate,
-            });
-
-            await patientRepository.save(patient);
 
             imported++;
           } catch {
-            // rollback automático de la transacción
+            errors.push({
+              row: rowNumber,
+              code: PatientImportErrorCode.ROW_PROCESSING_ERROR,
+              message: 'No se pudo importar el paciente y su suscripción',
+            });
           }
         }
       });

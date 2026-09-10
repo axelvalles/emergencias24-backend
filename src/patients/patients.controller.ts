@@ -26,6 +26,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../users/entities/user.entity';
 import { QueryPatientsDto } from './dto/query-patients.dto';
 import { UpdatePatientStatusDto } from './dto/update-patient-status.dto';
+import { ImportPatientsDto } from './dto/import-patients.dto';
 import {
   PatientImportErrorCode,
   PatientImportException,
@@ -125,10 +126,13 @@ export class PatientsController {
       },
     }),
   )
-  async importPatients(@UploadedFile() file: Express.Multer.File) {
+  async importPatients(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() context: ImportPatientsDto,
+  ) {
     if (!file) {
       throw new BadRequestException('File is required');
     }
-    return this.patientsImportService.importPatients(file);
+    return this.patientsImportService.importPatients(file, context);
   }
 }
