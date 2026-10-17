@@ -7,13 +7,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository, SelectQueryBuilder } from 'typeorm';
 import { applyGlobalSearch } from '../../common/query/apply-global-search';
 import { Benefit } from '../../benefits/entities/benefit.entity';
-import {
-  CreatePlanBenefitDto,
-  CreatePlanDto,
-} from '../dto/create-plan.dto';
+import { CreatePlanBenefitDto, CreatePlanDto } from '../dto/create-plan.dto';
 import { QueryPlansDto } from '../dto/query-plans.dto';
 import { UpdatePlanDto } from '../dto/update-plan.dto';
-import { Plan, PlanStatus } from '../entities/plan.entity';
+import { Plan, PlanStatus, PlanType } from '../entities/plan.entity';
 import {
   PlanBenefit,
   PlanBenefitValueType,
@@ -39,6 +36,10 @@ export class PlansService {
   async create(createPlanDto: CreatePlanDto): Promise<Plan> {
     const { planBenefits, ...planData } = createPlanDto;
 
+    this.validatePackageCapacity(
+      createPlanDto.planType,
+      createPlanDto.beneficiaryCapacity,
+    );
     await this.validatePlanBenefits(planBenefits);
 
     const plan = this.planRepository.create(planData);
@@ -159,6 +160,18 @@ export class PlansService {
     await this.findOne(id);
     const plan = await this.findOneForPersistence(id);
     const { planBenefits, ...planData } = updatePlanDto;
+
+    if (
+      updatePlanDto.planType !== undefined ||
+      updatePlanDto.beneficiaryCapacity !== undefined
+    ) {
+      this.validatePackageCapacity(
+        updatePlanDto.planType ?? plan.planType,
+        updatePlanDto.beneficiaryCapacity !== undefined
+          ? updatePlanDto.beneficiaryCapacity
+          : plan.beneficiaryCapacity,
+      );
+    }
 
     if (planBenefits !== undefined) {
       await this.validatePlanBenefits(planBenefits);
@@ -339,6 +352,20 @@ export class PlansService {
     }
   }
 
+  private validatePackageCapacity(
+    planType: Plan['planType'],
+    beneficiaryCapacity?: number | null,
+  ) {
+    if (
+      [PlanType.FAMILY, PlanType.GROUP].includes(planType) &&
+      (!Number.isInteger(beneficiaryCapacity) || beneficiaryCapacity! <= 0)
+    ) {
+      throw new BadRequestException(
+        'Family and group plans require a positive beneficiary capacity',
+      );
+    }
+  }
+
   private async syncPlanBenefits(
     planId: string,
     planBenefits: CreatePlanBenefitDto[],
@@ -357,7 +384,7 @@ export class PlansService {
         quantity:
           planBenefit.valueType === PlanBenefitValueType.QUANTITY &&
           !planBenefit.isUnlimited
-            ? planBenefit.quantity ?? null
+            ? (planBenefit.quantity ?? null)
             : null,
         isUnlimited:
           planBenefit.valueType === PlanBenefitValueType.QUANTITY
@@ -365,7 +392,7 @@ export class PlansService {
             : false,
         discountPercentage:
           planBenefit.valueType === PlanBenefitValueType.DISCOUNT
-            ? planBenefit.discountPercentage ?? null
+            ? (planBenefit.discountPercentage ?? null)
             : null,
       }),
     );

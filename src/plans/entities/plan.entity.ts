@@ -68,6 +68,9 @@ export class Plan {
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   monthlyCost: string;
 
+  @Column({ type: 'integer', nullable: true })
+  beneficiaryCapacity: number | null;
+
   @Column({
     type: 'enum',
     enum: PlanBillingPeriod,

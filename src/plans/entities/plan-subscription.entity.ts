@@ -13,6 +13,7 @@ import { uuidv7 } from 'uuidv7';
 import { Patient } from '../../patients/entities/patient.entity';
 import { Plan } from './plan.entity';
 import { Company } from 'src/companies/entities/company.entity';
+import { PlanContract } from './plan-contract.entity';
 
 export enum PlanSubscriptionStatus {
   ACTIVE = 'ACTIVE',
@@ -24,12 +25,17 @@ export enum PlanSubscriptionStatus {
 export enum PayerType {
   PATIENT = 'PATIENT',
   COMPANY = 'COMPANY',
+  INDIVIDUAL = 'INDIVIDUAL',
 }
 
 @Entity('plan_subscriptions')
 @Index('IDX_PS_PATIENT_ACTIVE', ['patient', 'status', 'startDate', 'endDate'])
 @Index('IDX_PS_COMPANY_ACTIVE', ['company', 'status'])
 @Index('IDX_PS_PAYER_PATIENT', ['payerPatient', 'status'])
+@Index('IDX_PS_CONTRACT_PATIENT', ['contract', 'patient'], {
+  unique: true,
+  where: '"contractId" IS NOT NULL AND "status" IN (\'ACTIVE\', \'SUSPENDED\')',
+})
 export class PlanSubscription {
   @PrimaryColumn('uuid')
   id: string;
@@ -59,6 +65,13 @@ export class PlanSubscription {
   @ManyToOne(() => Patient, { nullable: true, onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'payer_patient_id' })
   payerPatient?: Patient | null;
+
+  @ManyToOne(() => PlanContract, (contract) => contract.subscriptions, {
+    nullable: true,
+    onDelete: 'RESTRICT',
+  })
+  @JoinColumn({ name: 'contractId' })
+  contract?: PlanContract | null;
 
   /* =====================
      Reglas de cobertura

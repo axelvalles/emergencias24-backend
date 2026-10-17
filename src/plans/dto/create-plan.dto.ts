@@ -13,7 +13,11 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { PlanBillingPeriod, PlanType, PlanStatus } from '../entities/plan.entity';
+import {
+  PlanBillingPeriod,
+  PlanType,
+  PlanStatus,
+} from '../entities/plan.entity';
 import { PlanBenefitValueType } from '../entities/plan-benefit.entity';
 
 export class CreatePlanBenefitDto {
@@ -46,7 +50,8 @@ export class CreatePlanBenefitDto {
   )
   @IsString()
   @Matches(/^(100|\d{1,2})(\.\d{1,2})?$/, {
-    message: 'discountPercentage must be between 0 and 100 with up to 2 decimals',
+    message:
+      'discountPercentage must be between 0 and 100 with up to 2 decimals',
   })
   discountPercentage?: string;
 }
@@ -75,6 +80,12 @@ export class CreatePlanDto {
     message: 'monthlyCost must be a valid decimal with up to 2 decimals',
   })
   monthlyCost?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  beneficiaryCapacity?: number;
 
   @IsOptional()
   @IsString()
