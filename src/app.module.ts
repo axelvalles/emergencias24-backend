@@ -19,6 +19,7 @@ import { dbConfig, typeOrmFactory } from './config/db.config';
 import { envSchema } from './config/configuration';
 import { MunicipalityPricingModule } from './municipality-pricing/municipality-pricing.module';
 import { AmbulanceUnitsModule } from './ambulance-units/ambulance-units.module';
+import { IndividualPayersModule } from './individual-payers/individual-payers.module';
 
 // const isDevelopment = process.env.NODE_ENV !== 'production';
 
@@ -71,6 +72,7 @@ import { AmbulanceUnitsModule } from './ambulance-units/ambulance-units.module';
     CompaniesModule,
     MunicipalityPricingModule,
     AmbulanceUnitsModule,
+    IndividualPayersModule,
     BotModule,
     PatientsModule,
     UsersModule,
